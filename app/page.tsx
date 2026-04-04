@@ -1,9 +1,9 @@
 'use client';
 import { useState } from 'react';
-import { useChatStore } from '@/store/useChatStore';
+import { useChatStore } from '@/app/features/chat/store/useChatStore';
 import { ChatLayout } from '@/components/layouts/chat-layout';
-import { MessageList } from '@/components/chat/message-list';
-import { MessageInput } from '@/components/chat/message-input';
+import { MessageList } from '@/app/features/chat/components/message-list';
+import { MessageInput } from '@/app/features/chat/components/message-input';
 
 export default function Home() {
   const { messages, sendMessage, isLoading } = useChatStore();
@@ -39,7 +39,7 @@ export default function Home() {
         console.log('删除对话');
       }}
     >
-      <div className="flex flex-1 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <MessageList messages={messages} isLoading={isLoading} />
         <MessageInput onSend={handleSendMessage} disabled={isLoading} />
       </div>

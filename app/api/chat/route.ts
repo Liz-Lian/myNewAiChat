@@ -19,7 +19,7 @@ export async function POST(req: Request) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'Qwen/Qwen3-8B', // 硅基流动最推荐的模型
+          model: 'Qwen/Qwen3-8B',
           messages: messages,
           stream: true, // 必须开启流式
         }),
