@@ -2,8 +2,8 @@
 import { useState } from 'react';
 import { useChatStore } from '@/app/features/chat/store/useChatStore';
 import { ChatLayout } from '@/components/layouts/chat-layout';
-import { MessageList } from '@/app/features/chat/components/message-list';
-import { MessageInput } from '@/app/features/chat/components/message-input';
+import { MessageList } from '@/app/features/chat/components/MessageList';
+import { MessageInput } from '@/app/features/chat/components/MessageInput';
 
 export default function Home() {
   const { messages, sendMessage, isLoading } = useChatStore();
