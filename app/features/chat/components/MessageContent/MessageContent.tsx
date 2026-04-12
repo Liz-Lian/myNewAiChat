@@ -24,7 +24,7 @@ export function MessageContent({ content, role }: MessageContentProps) {
   return (
     <div
       className={cn(
-        'min-w-0 text-sm leading-7 break-words',
+        'min-w-0 text-sm leading-7 wrap-break-word',
         role === 'user' ? 'text-white' : 'text-slate-900',
       )}
     >

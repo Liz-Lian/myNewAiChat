@@ -12,7 +12,8 @@ Use this file as the source of truth when coding in this repo.
 - Module alias: `@/*` maps to the repo root.
 - Package manager scripts live in `package.json`.
 - Prisma client output is generated into `app/generated/prisma`.
-- No `.cursor/rules/`, `.cursorrules`, or `.github/copilot-instructions.md` files were present.
+- No `.cursor/rules/` or `.cursorrules` files were present.
+- A Copilot-facing mirror lives at [`.github/copilot-instructions.md`](.github/copilot-instructions.md).
 
 ## Read first
 

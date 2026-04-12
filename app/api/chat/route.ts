@@ -23,6 +23,7 @@ export async function POST(req: Request) {
           messages: messages,
           stream: true, // 必须开启流式
         }),
+        signal: req.signal,
       },
     );
 
@@ -47,6 +48,10 @@ export async function POST(req: Request) {
       },
     });
   } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      return new Response(null, { status: 499 });
+    }
+
     console.error('Chat Error:', error);
     return NextResponse.json(
       { error: 'Internal Server Error' },

@@ -6,21 +6,28 @@
  */
 
 import { useState } from 'react';
-import { Send } from 'lucide-react';
+import { RotateCcw, Send, Square } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 interface MessageInputProps {
   onSend: (message: string) => void;
+  onStop: () => void;
+  onRetry: () => Promise<void>;
   disabled?: boolean;
+  error?: string | null;
 }
 
-export function MessageInput({ onSend, disabled }: MessageInputProps) {
-  // 管理输入框的文本内容
+export function MessageInput({
+  onSend,
+  onStop,
+  onRetry,
+  disabled,
+  error,
+}: MessageInputProps) {
   const [input, setInput] = useState('');
 
-  // 处理发送消息：验证内容、调用回调、清空输入框
   const handleSend = () => {
     if (input.trim() && !disabled) {
       onSend(input);
@@ -28,10 +35,12 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
     }
   };
 
+  const isRetryVisible = Boolean(error);
+
   return (
     <div className="border-t bg-white px-6 py-4">
+      {error ? <p className="mb-3 text-sm text-red-500">{error}</p> : null}
       <div className="flex gap-2">
-        {/* 消息输入框：Shift+Enter换行，Enter发送 */}
         <Input
           placeholder="输入消息... (按 Enter 发送)"
           value={input}
@@ -40,7 +49,22 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
           disabled={disabled}
           className="flex-1"
         />
-        {/* 发送按钮：内容为空或禁用状态下不可点击 */}
+        {disabled ? (
+          <Button onClick={onStop} variant="outline" className="gap-2">
+            <Square className="h-4 w-4" />
+            停止
+          </Button>
+        ) : null}
+        {isRetryVisible ? (
+          <Button
+            onClick={() => void onRetry()}
+            variant="outline"
+            className="gap-2"
+          >
+            <RotateCcw className="h-4 w-4" />
+            重试
+          </Button>
+        ) : null}
         <Button
           onClick={handleSend}
           disabled={disabled || !input.trim()}
