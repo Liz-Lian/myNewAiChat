@@ -1,5 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+
 import { useChatStore } from '@/app/features/chat/store/useChatStore';
 import { ChatLayout } from '@/components/layouts/chat-layout';
 import { MessageList } from '@/app/features/chat/components/MessageList';
@@ -41,13 +43,15 @@ export default function Home() {
       onSelectConversation={setActiveConversationId}
       onNewChat={() => {
         clearConversation();
+        toast.success('已开启新对话');
       }}
       currentTitle={activeConversation?.title || '新对话'}
       onDeleteConversation={() => {
         clearConversation();
+        toast.success('对话已清空');
       }}
     >
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-transparent">
         <MessageList messages={messages} isLoading={isLoading} />
         <MessageInput
           onSend={handleSendMessage}

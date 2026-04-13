@@ -25,7 +25,7 @@ export function MessageContent({ content, role }: MessageContentProps) {
     <div
       className={cn(
         'min-w-0 text-sm leading-7 wrap-break-word',
-        role === 'user' ? 'text-white' : 'text-slate-900',
+        role === 'user' ? 'text-primary-foreground' : 'text-foreground',
       )}
     >
       <ReactMarkdown

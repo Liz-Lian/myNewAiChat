@@ -25,14 +25,14 @@ type MarkdownCodeProps = ComponentPropsWithoutRef<'code'> &
  * 为用户消息和AI消息应用不同的颜色方案
  */
 export function createMarkdownComponents(role: MessageRole): Components {
-  // 判断是否为用户消息
   const isUser = role === 'user';
-  // 根据角色设置文本颜色
-  const textClass = isUser ? 'text-white' : 'text-slate-900';
-  const mutedTextClass = isUser ? 'text-white/85' : 'text-slate-700';
+  const textClass = isUser ? 'text-primary-foreground' : 'text-foreground';
+  const mutedTextClass = isUser
+    ? 'text-primary-foreground/85'
+    : 'text-muted-foreground';
   const linkClass = isUser
-    ? 'text-white underline underline-offset-4 decoration-white/70 hover:decoration-white'
-    : 'text-blue-700 underline underline-offset-4 decoration-blue-500/60 hover:decoration-blue-600';
+    ? 'text-primary-foreground underline underline-offset-4 decoration-primary-foreground/70 hover:decoration-primary-foreground'
+    : 'text-primary underline underline-offset-4 decoration-primary/60 hover:decoration-primary';
 
   return {
     h1: ({ children }) => (
@@ -151,7 +151,7 @@ export function createMarkdownComponents(role: MessageRole): Components {
         </table>
       </div>
     ),
-    thead: ({ children }) => <thead className="bg-black/5">{children}</thead>,
+    thead: ({ children }) => <thead className="bg-current/5">{children}</thead>,
     th: ({ children }) => (
       <th
         className={cn(

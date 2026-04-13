@@ -28,8 +28,7 @@ export function ChatLayout({
   onDeleteConversation,
 }: ChatLayoutProps) {
   return (
-    <div className="flex h-screen overflow-hidden bg-white">
-      {/* Sidebar */}
+    <div className="text-foreground flex min-h-screen overflow-hidden bg-transparent">
       <ConversationSidebar
         conversations={conversations}
         activeId={activeConversationId}
@@ -37,12 +36,9 @@ export function ChatLayout({
         onNewChat={onNewChat}
       />
 
-      {/* Main Chat Area */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        {/* Header */}
+      <div className="border-border/40 bg-background/75 flex min-h-0 flex-1 flex-col overflow-hidden border-l shadow-[0_0_0_1px_rgba(255,255,255,0.02)] backdrop-blur-2xl">
         <ChatHeader title={currentTitle} onDelete={onDeleteConversation} />
 
-        {/* Chat Content */}
         {children}
       </div>
     </div>

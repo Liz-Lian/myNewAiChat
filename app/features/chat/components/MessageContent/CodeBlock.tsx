@@ -56,17 +56,14 @@ function getCodeString(children: ReactNode) {
 }
 
 export function CodeBlock({ inline, className, children }: CodeBlockProps) {
-  // 提取代码字符串并移除末尾的换行符
   const code = getCodeString(children).replace(/\n$/, '');
-  // 判断是否为行内模式：显式设置或根据是否有语言类名推断
   const isInline = inline ?? !className?.includes('language-');
 
-  // 行内代码样式
   if (isInline) {
     return (
       <code
         className={cn(
-          'rounded-md bg-slate-200 px-1.5 py-0.5 font-mono text-[0.92em] text-slate-900 dark:bg-white/10 dark:text-slate-100',
+          'border-border/60 bg-muted/70 text-foreground rounded-lg border px-1.5 py-0.5 font-mono text-[0.92em]',
           className,
         )}
       >
@@ -76,9 +73,9 @@ export function CodeBlock({ inline, className, children }: CodeBlockProps) {
   }
 
   return (
-    <div className="group/codeblock my-3 overflow-hidden rounded-xl border border-slate-200 bg-slate-950 shadow-sm dark:border-white/10 dark:bg-slate-900">
+    <div className="group/codeblock border-border/70 my-3 overflow-hidden rounded-2xl border bg-slate-950 shadow-[0_16px_50px_rgba(15,23,42,0.14)] dark:bg-slate-900">
       <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-white/5 px-4 py-2">
-        <span className="text-xs font-medium tracking-wider text-slate-300 uppercase dark:text-slate-300">
+        <span className="text-xs font-medium tracking-wider text-slate-300 uppercase">
           {getLanguage(className)}
         </span>
         <CopyButton code={code} />

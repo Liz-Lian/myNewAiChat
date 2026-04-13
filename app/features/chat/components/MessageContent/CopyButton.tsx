@@ -18,10 +18,8 @@ interface CopyButtonProps {
 }
 
 export function CopyButton({ code, className }: CopyButtonProps) {
-  // 追踪复制状态，用于显示反馈
   const [copied, setCopied] = useState(false);
 
-  // 2秒后自动恢复复制状态
   useEffect(() => {
     if (!copied) {
       return;
@@ -34,7 +32,6 @@ export function CopyButton({ code, className }: CopyButtonProps) {
     return () => window.clearTimeout(timeoutId);
   }, [copied]);
 
-  // 处理复制逻辑：将代码写入剪贴板并更新状态
   const handleCopy = async () => {
     if (!code) {
       return;
@@ -49,7 +46,7 @@ export function CopyButton({ code, className }: CopyButtonProps) {
       type="button"
       onClick={handleCopy}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-200 opacity-0 transition group-hover/codeblock:opacity-100 hover:bg-white/10 hover:text-white dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10 dark:hover:text-white',
+        'inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-200 opacity-0 transition group-hover/codeblock:opacity-100 hover:bg-white/10 hover:text-white',
         className,
       )}
     >
