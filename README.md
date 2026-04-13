@@ -20,6 +20,33 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+
+## Voice features
+
+The chat UI now supports SiliconFlow-powered voice playback and speech input.
+
+### Environment variables
+
+Add these server-side variables to your local env file:
+
+```bash
+SILICONFLOW_API_KEY=...
+SILICONFLOW_BASE_URL=https://api.siliconflow.cn/v1
+SILICONFLOW_TTS_MODEL=FunAudioLLM/CosyVoice2-0.5B
+SILICONFLOW_STT_MODEL=FunAudioLLM/SenseVoiceSmall
+SILICONFLOW_TTS_VOICE=default
+SILICONFLOW_TTS_RESPONSE_FORMAT=mp3
+SILICONFLOW_TTS_SAMPLE_RATE=24000
+SILICONFLOW_TTS_SPEED=1
+SILICONFLOW_TTS_GAIN=1
+```
+
+### Usage
+
+- To record speech, click **开始录音** in the input area, speak, then click **停止录音**. The transcription is filled back into the text box for editing before sending.
+- To listen to an AI reply, click **朗读** beside the assistant message. You can then pause or stop playback while it is playing.
+- If the browser does not support recording, the input area shows a downgrade notice and the app still works with text input.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
