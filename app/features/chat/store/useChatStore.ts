@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+import { consumeSseStream } from '@/lib/chat-sse';
+
 interface Message {
   role: 'user' | 'assistant';
   content: string;
@@ -9,6 +11,7 @@ type ChatStreamReader = ReadableStreamDefaultReader<Uint8Array>;
 
 interface ChatState {
   messages: Message[];
+  conversationId: string | null;
   // 是否正在生成AI回复（即已发送用户消息，正在等待或接收AI回复）
   isGenerating: boolean;
   isLoading: boolean;
@@ -42,6 +45,7 @@ export const useChatStore = create<ChatState>((set, get) => {
   const resetAllState = () => {
     set({
       messages: [],
+      conversationId: null,
       isGenerating: false,
       isLoading: false,
       error: null,
@@ -83,6 +87,7 @@ export const useChatStore = create<ChatState>((set, get) => {
   // 真正发请求、读流、拼接助手消息、处理错误
   const sendChatRequest = async (
     messages: Message[],
+    conversationId: string | null,
     requestId: number,
     controller: AbortController,
   ) => {
@@ -92,7 +97,7 @@ export const useChatStore = create<ChatState>((set, get) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ messages }),
+        body: JSON.stringify({ messages, conversationId }),
         signal: controller.signal,
       });
 
@@ -136,6 +141,7 @@ export const useChatStore = create<ChatState>((set, get) => {
       }
 
       const reader = response.body.getReader();
+      const responseConversationId = response.headers.get('x-conversation-id');
       if (!isCurrentRequest(requestId)) {
         await reader.cancel().catch((error) => {
           console.warn('Failed to cancel stale reader:', error);
@@ -143,98 +149,62 @@ export const useChatStore = create<ChatState>((set, get) => {
         return;
       }
 
-      set({ currentReader: reader });
+      set({
+        currentReader: reader,
+        conversationId: responseConversationId || conversationId,
+      });
 
-      const decoder = new TextDecoder();
       let accumulatedContent = '';
       let hasStartedAssistant = false;
-      let buffer = '';
 
-      while (true) {
-        if (!isCurrentRequest(requestId)) {
-          await reader.cancel().catch((error) => {
-            console.warn('Failed to cancel stale reader:', error);
-          });
-          return;
-        }
-
-        const { done, value } = await reader.read();
-        if (done) {
-          break;
-        }
-
-        buffer += decoder.decode(value, { stream: true });
-
-        const lines = buffer.split(/\r?\n/);
-        buffer = lines.pop() ?? '';
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) {
-            continue;
+      const consumeStatus = await consumeSseStream({
+        reader,
+        shouldStop: () => !isCurrentRequest(requestId),
+        onDelta: (rawDelta) => {
+          if (!isCurrentRequest(requestId)) {
+            return;
           }
 
-          if (line === 'data: [DONE]') {
-            continue;
-          }
-
-          const raw = line.slice(6).trim();
-          if (!raw || !isCurrentRequest(requestId)) {
-            continue;
-          }
-
-          try {
-            const data = JSON.parse(raw) as {
-              choices?: Array<{ delta?: { content?: string } }>;
-            };
-
-            let delta = data.choices?.[0]?.delta?.content || '';
+          let delta = rawDelta;
+          if (!accumulatedContent) {
+            delta = delta.replace(/^\r?\n+/, '');
             if (!delta) {
-              continue;
-            }
-
-            if (!accumulatedContent) {
-              delta = delta.replace(/^\r?\n+/, '');
-              if (!delta) {
-                continue;
-              }
-            }
-
-            accumulatedContent += delta;
-
-            if (!isCurrentRequest(requestId)) {
               return;
             }
-
-            if (!hasStartedAssistant) {
-              hasStartedAssistant = true;
-              const assistantMessage: Message = {
-                role: 'assistant',
-                content: accumulatedContent,
-              };
-
-              set((state) => ({
-                messages: [...state.messages, assistantMessage],
-              }));
-              continue;
-            }
-
-            set((state) => {
-              const nextMessages = [...state.messages];
-              nextMessages[nextMessages.length - 1] = {
-                ...nextMessages[nextMessages.length - 1],
-                content: accumulatedContent,
-              };
-
-              return { messages: nextMessages };
-            });
-          } catch (error) {
-            if (error instanceof SyntaxError) {
-              continue;
-            }
-
-            throw error;
           }
-        }
+
+          accumulatedContent += delta;
+
+          if (!hasStartedAssistant) {
+            hasStartedAssistant = true;
+            const assistantMessage: Message = {
+              role: 'assistant',
+              content: accumulatedContent,
+            };
+
+            set((state) => ({
+              messages: [...state.messages, assistantMessage],
+            }));
+            return;
+          }
+
+          set((state) => {
+            const nextMessages = [...state.messages];
+            nextMessages[nextMessages.length - 1] = {
+              ...nextMessages[nextMessages.length - 1],
+              content: accumulatedContent,
+            };
+
+            return { messages: nextMessages };
+          });
+        },
+      });
+
+      if (consumeStatus === 'stopped') {
+        await reader.cancel().catch((error) => {
+          console.warn('Failed to cancel stale reader:', error);
+        });
+        return;
       }
     } catch (error) {
       if (controller.signal.aborted) {
@@ -261,6 +231,7 @@ export const useChatStore = create<ChatState>((set, get) => {
 
   return {
     messages: [],
+    conversationId: null,
     isGenerating: false,
     isLoading: false,
     error: null,
@@ -307,7 +278,12 @@ export const useChatStore = create<ChatState>((set, get) => {
         currentReader: null,
       });
 
-      await sendChatRequest(nextMessages, requestId, controller);
+      await sendChatRequest(
+        nextMessages,
+        get().conversationId,
+        requestId,
+        controller,
+      );
     },
     sendMessage: async (content) => {
       const trimmedContent = content.trim();
@@ -322,6 +298,7 @@ export const useChatStore = create<ChatState>((set, get) => {
         content: trimmedContent,
       };
       const nextMessages: Message[] = [...get().messages, userMessage];
+      const currentConversationId = get().conversationId;
 
       set({
         messages: nextMessages,
@@ -333,7 +310,12 @@ export const useChatStore = create<ChatState>((set, get) => {
         currentReader: null,
       });
 
-      await sendChatRequest(nextMessages, requestId, controller);
+      await sendChatRequest(
+        nextMessages,
+        currentConversationId,
+        requestId,
+        controller,
+      );
     },
   };
 });
