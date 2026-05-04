@@ -20,6 +20,9 @@ type CreateMessageInput = {
 export const messageRepository = {
   /**
    * 创建一条消息记录。
+   *
+   * @param input 消息创建参数。
+   * @returns 新建消息的完整展示字段。
    */
   create(input: CreateMessageInput) {
     return prisma.message.create({
@@ -42,6 +45,9 @@ export const messageRepository = {
 
   /**
    * 按时间升序获取会话消息。
+   *
+   * @param conversationId 会话 ID。
+   * @returns 指定会话下按创建时间升序排列的消息列表。
    */
   listByConversation(conversationId: string) {
     return prisma.message.findMany({

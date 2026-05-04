@@ -12,26 +12,31 @@ type ChatStreamReader = ReadableStreamDefaultReader<Uint8Array>;
 interface ChatState {
   messages: Message[];
   conversationId: string | null;
-  // 是否正在生成AI回复（即已发送用户消息，正在等待或接收AI回复）
+  /** 是否正在生成 AI 回复，即已发送用户消息且正在等待或接收回复。 */
   isGenerating: boolean;
   isLoading: boolean;
   error: string | null;
-  // 当前活跃的请求ID，用于区分不同的请求，确保状态更新只影响当前请求
+  /** 当前活跃的请求 ID，用于确保状态更新只影响最新请求。 */
   currentRequestId: number | null;
-  // 当前请求的AbortController，用于取消请求
+  /** 当前请求的 AbortController，用于取消请求。 */
   currentController: AbortController | null;
-  // 当前请求的流读取器，用于取消流读取
+  /** 当前请求的流读取器，用于取消流读取。 */
   currentReader: ChatStreamReader | null;
   sendMessage: (content: string) => Promise<void>;
   retryLastMessage: () => Promise<void>;
   stopGeneration: () => void;
   clearConversation: () => void;
 }
-// 请求序列号，用于生成唯一的请求ID，确保每次发送消息都会有一个新的请求ID
+
+/**
+ * 请求序列号，用于生成唯一请求 ID。
+ */
 let requestSequence = 0;
 
 export const useChatStore = create<ChatState>((set, get) => {
-  // 清理“当前请求状态”（不清消息）
+  /**
+   * 清理当前请求状态，但保留已展示的消息和会话 ID。
+   */
   const clearActiveRequest = () => {
     set({
       isGenerating: false,
@@ -41,7 +46,9 @@ export const useChatStore = create<ChatState>((set, get) => {
       currentReader: null,
     });
   };
-  // 清理“整段会话状态”（会清消息）
+  /**
+   * 清理整段会话状态，包括消息、会话 ID、错误和请求控制对象。
+   */
   const resetAllState = () => {
     set({
       messages: [],
@@ -54,7 +61,9 @@ export const useChatStore = create<ChatState>((set, get) => {
       currentReader: null,
     });
   };
-  // 中断请求 + 取消流读取 + 清理当前请求状态
+  /**
+   * 中断当前聊天请求并取消正在读取的流。
+   */
   const stopCurrentRequest = () => {
     const { currentController, currentReader } = get();
 
@@ -64,10 +73,20 @@ export const useChatStore = create<ChatState>((set, get) => {
     });
     clearActiveRequest();
   };
-  // 判断请求是否还是“当前有效请求”
+  /**
+   * 判断指定请求是否仍是当前有效请求。
+   *
+   * @param requestId 待检查的请求 ID。
+   * @returns 请求仍然有效时返回 `true`。
+   */
   const isCurrentRequest = (requestId: number) =>
     get().currentRequestId === requestId;
-  // 求结束统一收尾（释放 reader 锁 + 清理当前请求状态）
+
+  /**
+   * 在请求结束时统一释放流锁并清理请求状态。
+   *
+   * @param requestId 需要收尾的请求 ID。
+   */
   const finalizeRequest = (requestId: number) => {
     if (!isCurrentRequest(requestId)) {
       return;
@@ -84,7 +103,14 @@ export const useChatStore = create<ChatState>((set, get) => {
 
     clearActiveRequest();
   };
-  // 真正发请求、读流、拼接助手消息、处理错误
+  /**
+   * 发送聊天请求、消费 SSE 响应并逐步更新 assistant 消息。
+   *
+   * @param messages 本次发送给后端的完整上下文消息。
+   * @param conversationId 当前会话 ID，首次发送时为 `null`。
+   * @param requestId 本次请求的唯一 ID。
+   * @param controller 本次请求使用的中断控制器。
+   */
   const sendChatRequest = async (
     messages: Message[],
     conversationId: string | null,
@@ -238,16 +264,24 @@ export const useChatStore = create<ChatState>((set, get) => {
     currentRequestId: null,
     currentController: null,
     currentReader: null,
+    /**
+     * 停止当前 AI 回复生成，并清空当前错误提示。
+     */
     stopGeneration: () => {
       stopCurrentRequest();
       set({ error: null });
     },
-    // 删掉末尾 assistant 后重发最后一条 user
+    /**
+     * 清空当前会话，并取消正在进行的生成。
+     */
     clearConversation: () => {
       stopCurrentRequest();
       requestSequence += 1;
       resetAllState();
     },
+    /**
+     * 删除末尾 assistant 消息后，重新发送最后一条 user 消息。
+     */
     retryLastMessage: async () => {
       const { messages, isGenerating } = get();
 
@@ -285,6 +319,11 @@ export const useChatStore = create<ChatState>((set, get) => {
         controller,
       );
     },
+    /**
+     * 发送新的用户消息，并启动对应的流式聊天请求。
+     *
+     * @param content 用户输入的原始消息内容。
+     */
     sendMessage: async (content) => {
       const trimmedContent = content.trim();
       if (!trimmedContent || get().isGenerating) {

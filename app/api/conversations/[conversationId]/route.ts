@@ -37,13 +37,24 @@ type RouteContext = {
   }>;
 };
 
+/**
+ * 获取当前登录用户拥有的单个会话。
+ *
+ * @param req 当前请求，用于读取会话 Cookie。
+ * @param context Next.js 动态路由上下文，包含会话 ID。
+ * @returns 会话元信息响应；未登录、无归属或失败时返回结构化 JSON 错误。
+ */
 export async function GET(req: Request, context: RouteContext) {
   try {
-    // 先鉴权，再执行资源级权限校验。
+    /**
+     * 先鉴权，再执行资源级权限校验。
+     */
     const userId = await requireCurrentUserId(req);
     const { conversationId } = await context.params;
 
-    // 通过 id + userId 双条件确保只能读取自己的会话。
+    /**
+     * 通过 id + userId 双条件确保只能读取自己的会话。
+     */
     const conversation = await conversationRepository.findOwnedById(
       userId,
       conversationId,
@@ -73,9 +84,18 @@ export async function GET(req: Request, context: RouteContext) {
   }
 }
 
+/**
+ * 更新当前登录用户拥有的会话标题。
+ *
+ * @param req 更新请求，body 需包含新的 title。
+ * @param context Next.js 动态路由上下文，包含会话 ID。
+ * @returns 更新后的会话元信息；未登录、无归属或失败时返回结构化 JSON 错误。
+ */
 export async function PATCH(req: Request, context: RouteContext) {
   try {
-    // 先鉴权，再做参数与资源权限检查。
+    /**
+     * 先鉴权，再做参数与资源权限检查。
+     */
     const userId = await requireCurrentUserId(req);
     const { conversationId } = await context.params;
 
@@ -90,7 +110,9 @@ export async function PATCH(req: Request, context: RouteContext) {
       );
     }
 
-    // 先确认资源归属，避免跨用户更新。
+    /**
+     * 先确认资源归属，避免跨用户更新。
+     */
     const existingConversation = await conversationRepository.findOwnedIdOnly(
       userId,
       conversationId,
@@ -130,13 +152,24 @@ export async function PATCH(req: Request, context: RouteContext) {
   }
 }
 
+/**
+ * 删除当前登录用户拥有的会话。
+ *
+ * @param req 当前请求，用于读取会话 Cookie。
+ * @param context Next.js 动态路由上下文，包含会话 ID。
+ * @returns 删除成功消息；未登录、无归属或失败时返回结构化 JSON 错误。
+ */
 export async function DELETE(req: Request, context: RouteContext) {
   try {
-    // 先鉴权，再按 userId 做删除隔离。
+    /**
+     * 先鉴权，再按 userId 做删除隔离。
+     */
     const userId = await requireCurrentUserId(req);
     const { conversationId } = await context.params;
 
-    // deleteMany 搭配 userId 条件，可同时实现权限校验与幂等删除。
+    /**
+     * deleteMany 搭配 userId 条件，可同时实现权限校验与幂等删除。
+     */
     const deleteResult = await conversationRepository.deleteOwned(
       userId,
       conversationId,

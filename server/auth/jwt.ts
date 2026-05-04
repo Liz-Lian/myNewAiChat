@@ -27,7 +27,10 @@ export type AuthPayload = {
 };
 
 /**
- * 读取并校验 JWT 密钥配置。
+ * 读取并编码 JWT 签名密钥。
+ *
+ * @returns 可供 jose 使用的 HMAC 密钥字节数组。
+ * @throws 当 `AUTH_JWT_SECRET` 未配置时抛出错误。
  */
 function getJwtSecret(): Uint8Array {
   const secret = process.env.AUTH_JWT_SECRET;
@@ -41,6 +44,10 @@ function getJwtSecret(): Uint8Array {
 
 /**
  * 根据用户信息签发会话 JWT。
+ *
+ * @param user 当前登录用户的标准化认证载荷。
+ * @returns 已签名的会话令牌字符串。
+ * @throws 当 `AUTH_JWT_SECRET` 未配置或签名失败时抛出错误。
  */
 export async function createSessionToken(user: AuthPayload): Promise<string> {
   return new SignJWT({
@@ -58,6 +65,10 @@ export async function createSessionToken(user: AuthPayload): Promise<string> {
 
 /**
  * 校验并解析会话 JWT。
+ *
+ * @param token 待校验的会话令牌。
+ * @returns 从令牌中解析出的标准化用户认证载荷。
+ * @throws 当令牌签名、issuer、audience、过期时间或 payload 不合法时抛出错误。
  */
 export async function verifySessionToken(token: string): Promise<AuthPayload> {
   const { payload } = await jwtVerify(token, getJwtSecret(), {

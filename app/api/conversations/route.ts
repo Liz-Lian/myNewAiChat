@@ -31,12 +31,24 @@ const createConversationSchema = z.object({
     .optional(),
 });
 
+/**
+ * 获取当前登录用户的会话列表。
+ *
+ * 只返回当前用户拥有的会话元信息，并按最近更新时间倒序排列。
+ *
+ * @param req 当前请求，用于读取会话 Cookie。
+ * @returns 会话列表响应；未登录或失败时返回结构化 JSON 错误。
+ */
 export async function GET(req: Request) {
   try {
-    // 先鉴权，未登录直接走统一 401。
+    /**
+     * 先鉴权，未登录直接走统一 401。
+     */
     const userId = await requireCurrentUserId(req);
 
-    // 仅返回当前用户的数据，禁止跨用户读取。
+    /**
+     * 仅返回当前用户的数据，禁止跨用户读取。
+     */
     const conversations = await conversationRepository.listByUserId(userId);
 
     return NextResponse.json(
@@ -59,9 +71,19 @@ export async function GET(req: Request) {
   }
 }
 
+/**
+ * 为当前登录用户创建新会话。
+ *
+ * 请求体可以传入可选标题；未传标题时使用“新对话”。
+ *
+ * @param req 创建会话请求，body 可包含 title。
+ * @returns 创建成功时返回新会话元信息；失败时返回结构化 JSON 错误。
+ */
 export async function POST(req: Request) {
   try {
-    // 先鉴权，创建动作必须绑定到当前用户。
+    /**
+     * 先鉴权，创建动作必须绑定到当前用户。
+     */
     const userId = await requireCurrentUserId(req);
 
     const body = await req.json().catch(() => null);
@@ -75,7 +97,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // 新会话强制写入 userId，确保数据隔离。
+    /**
+     * 新会话强制写入 userId，确保数据隔离。
+     */
     const conversation = await conversationRepository.createForUser(
       userId,
       parsed.data.title || '新对话',

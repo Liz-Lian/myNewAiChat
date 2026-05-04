@@ -11,6 +11,15 @@ import { userRepository } from '@/server/repositories/user.repository';
 
 export const runtime = 'nodejs';
 
+/**
+ * 处理用户登录请求。
+ *
+ * 校验邮箱和密码后签发会话 JWT，并通过 HttpOnly Cookie 写入浏览器。
+ * 登录失败时统一返回邮箱或密码错误，避免泄露账号是否存在。
+ *
+ * @param req 登录请求，body 需包含 email 和 password。
+ * @returns 登录成功时返回当前用户基础信息；失败时返回结构化 JSON 错误。
+ */
 export async function POST(req: Request) {
   try {
     const bodyResult = loginRequestSchema.safeParse(

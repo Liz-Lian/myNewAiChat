@@ -1,5 +1,11 @@
 import 'dotenv/config';
 
+/**
+ * Prisma seed 命令入口。
+ *
+ * 负责加载环境变量、执行基础数据初始化，并在结束后断开 Prisma 连接。
+ */
+
 import prisma from '@/server/db/client';
 import { runSeed } from '@/server/db/seed';
 

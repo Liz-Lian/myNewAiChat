@@ -17,6 +17,15 @@ const updateSiliconFlowApiKeySchema = z.object({
     .nullable(),
 });
 
+/**
+ * 更新当前登录用户的 SiliconFlow API Key。
+ *
+ * 传入空字符串或 `null` 时会清空配置；成功响应只返回是否已配置，
+ * 不回显完整 API Key。
+ *
+ * @param req 更新请求，body 需包含 apiKey 字段。
+ * @returns 更新结果与 hasApiKey 标记；未登录或失败时返回结构化 JSON 错误。
+ */
 export async function PATCH(req: Request) {
   try {
     const userId = await requireCurrentUserId(req);

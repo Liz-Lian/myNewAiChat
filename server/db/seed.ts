@@ -17,6 +17,9 @@ const DEFAULT_ADMIN_PASSWORD = 'Admin@123456';
 
 /**
  * 执行基础数据初始化。
+ *
+ * @returns Seed 执行完成后 resolve。
+ * @throws 当 `DATABASE_URL` 缺失或管理员账号写入失败时抛出错误。
  */
 export async function runSeed() {
   const databaseUrl = process.env.DATABASE_URL;

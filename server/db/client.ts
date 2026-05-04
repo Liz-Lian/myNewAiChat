@@ -15,6 +15,8 @@ const globalForPrisma = global as unknown as {
 
 /**
  * 数据库连接适配器。
+ *
+ * 使用 Prisma PostgreSQL adapter 读取 `DATABASE_URL` 建立连接。
  */
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,

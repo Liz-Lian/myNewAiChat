@@ -17,6 +17,9 @@ type UpsertAdminUserInput = {
 export const userRepository = {
   /**
    * 根据邮箱查询用户。
+   *
+   * @param email 用户邮箱。
+   * @returns 找到时返回用户记录，否则返回 `null`。
    */
   findByEmail(email: string) {
     return prisma.user.findUnique({
@@ -28,6 +31,9 @@ export const userRepository = {
 
   /**
    * 根据用户 ID 查询用户。
+   *
+   * @param id 用户 ID。
+   * @returns 找到时返回用户记录，否则返回 `null`。
    */
   findById(id: string) {
     return prisma.user.findUnique({
@@ -39,6 +45,10 @@ export const userRepository = {
 
   /**
    * 更新指定用户的 SiliconFlow API Key。
+   *
+   * @param userId 用户 ID。
+   * @param apiKey 新 API Key；传入 `null` 表示清空。
+   * @returns 更新后的用户 ID 和 API Key 字段。
    */
   updateSiliconflowApiKey(userId: string, apiKey: string | null) {
     return prisma.user.update({
@@ -57,6 +67,9 @@ export const userRepository = {
 
   /**
    * 初始化或更新管理员账号。
+   *
+   * @param input 管理员账号初始化参数。
+   * @returns 管理员用户基础信息。
    */
   upsertAdminUser(input: UpsertAdminUserInput) {
     return prisma.user.upsert({

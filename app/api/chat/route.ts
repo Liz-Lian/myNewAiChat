@@ -38,6 +38,16 @@ const chatRequestSchema = z.object({
 
 const CHAT_MODEL = 'Qwen/Qwen3-8B';
 
+/**
+ * 解析会话标题。
+ *
+ * 优先使用前端传入标题；未传标题时使用最新用户消息前 40 个字符；
+ * 如果两者都为空，则回退到默认标题。
+ *
+ * @param title 前端传入的候选会话标题。
+ * @param fallback 用于生成标题的兜底文本，通常是最新用户消息。
+ * @returns 规范化后的会话标题。
+ */
 function resolveConversationTitle(
   title: string | undefined,
   fallback: string,
@@ -54,6 +64,16 @@ function resolveConversationTitle(
   return normalizedFallback.slice(0, 40);
 }
 
+/**
+ * 处理聊天发送请求。
+ *
+ * 会校验登录态、用户私有 SiliconFlow API Key 和会话归属；
+ * 首次发送时自动创建会话，随后把用户消息与完整 assistant 回复持久化。
+ * 对前端仍保持 SSE 流式响应，并通过响应头返回当前会话 ID。
+ *
+ * @param req 聊天请求，body 包含消息列表、可选会话 ID 和可选标题。
+ * @returns SSE 流式响应；失败时返回结构化 JSON 错误或 499 中断响应。
+ */
 export async function POST(req: Request) {
   try {
     const userId = await requireCurrentUserId(req);
