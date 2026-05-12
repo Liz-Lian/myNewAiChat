@@ -22,6 +22,7 @@ Read [AGENTS.md](../AGENTS.md) first, then open the task-specific docs only when
 - Auth tasks: [docs/auth-guide.md](../docs/auth-guide.md)
 - AI, SSE, and voice tasks: [docs/ai-voice-guide.md](../docs/ai-voice-guide.md)
 - Code review: [docs/code-review-guidelines.md](../docs/code-review-guidelines.md)
+- New features or cross-layer changes with SDD/TDD workflow: [docs/ai-collab-sdd-tdd-workflow.md](../docs/ai-collab-sdd-tdd-workflow.md)
 - Large refactors: [.agents/PLANS.md](../.agents/PLANS.md)
 
 ## Commands
@@ -51,3 +52,4 @@ Read [AGENTS.md](../AGENTS.md) first, then open the task-specific docs only when
 - Check the nearest file with the same responsibility.
 - Follow local patterns over generic framework assumptions.
 - Verify narrow changes with the smallest useful command, usually `npx eslint <file>`.
+- For new feature work that should follow the standardized AI workflow, read `docs/ai-collab-sdd-tdd-workflow.md`, create the frontend/backend SDD package and TDD plan first, then wait for user approval before implementation.

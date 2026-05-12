@@ -16,9 +16,12 @@
 - 登录态、JWT、Cookie、权限隔离 -> [docs/auth-guide.md](docs/auth-guide.md)
 - 聊天流式响应、SiliconFlow、STT/TTS 语音能力 -> [docs/ai-voice-guide.md](docs/ai-voice-guide.md)
 - 代码审查任务 -> [docs/code-review-guidelines.md](docs/code-review-guidelines.md)
+- 新功能、跨层改造、SDD/TDD AI 协作流程 -> [docs/ai-collab-sdd-tdd-workflow.md](docs/ai-collab-sdd-tdd-workflow.md)
 - 大型重构或多步骤改造 -> [.agents/PLANS.md](.agents/PLANS.md)
 
 如果任务跨多个领域，只阅读相关文档。例如“给会话列表接真实数据”通常需要 `frontend-guide`、`api-guide`、`database-guide`。
+
+实现新功能或跨层改造前，应先参考 `docs/ai-collab-sdd-tdd-workflow.md`，先产出前端/后端 SDD 文档包和 TDD 计划，等用户审查并明确同意后再实现。
 
 ## 项目事实
 
@@ -64,6 +67,14 @@
 - 跨模块、类型或构建相关改动再运行 `npx tsc --noEmit` 或 `npm run build`。
 - 数据库 schema 变更后运行 Prisma 生成，并按任务需要迁移或 push。
 - 不要删除失败测试或忽略错误来制造通过结果；修根因。
+
+## Bug 修复记录
+
+- 每次完成 bug 修复后，必须在 `bug日志/` 下新增一篇 Markdown 总结文档。
+- 文件名使用 `YYYY-MM-DD-问题简述.md`，问题简述用中文短语，避免过长。
+- 优先参考 `bug日志/_template.md` 的结构，至少包含：现象、复现步骤、根因分析、修复方案、验证、回归风险、经验总结。
+- 文档要写清楚相关文件路径、实际改动点和执行过的验证命令。
+- 如果同一次任务修复多个相关 bug，可以合并成一篇日志；无关 bug 分开记录。
 
 ## 如果不确定
 
