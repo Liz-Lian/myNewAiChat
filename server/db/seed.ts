@@ -33,7 +33,9 @@ export async function runSeed() {
   const adminPassword =
     process.env.SEED_ADMIN_PASSWORD || DEFAULT_ADMIN_PASSWORD;
   const siliconflowApiKey =
-    process.env.SEED_ADMIN_SILICONFLOW_API_KEY?.trim() || null;
+    process.env.SEED_ADMIN_SILICONFLOW_API_KEY?.trim() ||
+    process.env.SILICONFLOW_API_KEY?.trim() ||
+    null;
 
   console.log('[seed] 开始初始化基础数据...');
   console.log(`[seed] admin email: ${adminEmail}`);

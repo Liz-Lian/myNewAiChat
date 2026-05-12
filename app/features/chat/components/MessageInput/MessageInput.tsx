@@ -20,6 +20,7 @@ interface MessageInputProps {
   onStop: () => void;
   onRetry: () => Promise<void>;
   disabled?: boolean;
+  isGenerating?: boolean;
   error?: string | null;
 }
 
@@ -28,6 +29,7 @@ export function MessageInput({
   onStop,
   onRetry,
   disabled,
+  isGenerating,
   error,
 }: MessageInputProps) {
   const [input, setInput] = useState('');
@@ -121,7 +123,7 @@ export function MessageInput({
                   ? '识别中'
                   : '开始录音'}
             </Button>
-            {disabled ? (
+            {isGenerating ? (
               <Button
                 type="button"
                 onClick={onStop}

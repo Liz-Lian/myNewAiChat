@@ -25,10 +25,10 @@ interface Message {
 
 interface MessageListProps {
   messages: Message[];
-  isLoading?: boolean;
+  isGenerating?: boolean;
 }
 
-export function MessageList({ messages, isLoading }: MessageListProps) {
+export function MessageList({ messages, isGenerating }: MessageListProps) {
   const playback = useSpeechPlayback();
 
   return (
@@ -175,7 +175,7 @@ export function MessageList({ messages, isLoading }: MessageListProps) {
             })
           )}
 
-          {isLoading && (
+          {isGenerating && (
             <div className="flex justify-start">
               <div className="border-border/60 bg-card/90 rounded-[1.5rem] border px-4 py-3 shadow-sm backdrop-blur-xl">
                 <div className="flex gap-1.5">

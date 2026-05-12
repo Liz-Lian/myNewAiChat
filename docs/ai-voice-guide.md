@@ -5,7 +5,7 @@
 ## 聊天接口
 
 - `app/api/chat/route.ts` 使用当前登录用户保存的 `siliconflowApiKey` 调用 SiliconFlow。
-- 聊天模型目前固定为 `Qwen/Qwen3-8B`。
+- 聊天模型来自 `SILICONFLOW_CHAT_MODEL`，缺省为 `Qwen/Qwen3-8B`。
 - base URL 使用 `SILICONFLOW_BASE_URL`，缺省为 `https://api.siliconflow.cn/v1`。
 - 请求体包含 `{ model, messages, stream: true }`。
 - 服务端会保存最新 user message；流结束后如果 assistant 内容非空，再保存 assistant message。
@@ -38,6 +38,7 @@
 - 聊天：用户级 SiliconFlow API Key 保存在数据库 `User.siliconflowApiKey`。
 - 语音：服务端读取 `SILICONFLOW_API_KEY`。
 - 通用：`SILICONFLOW_BASE_URL`。
+- 聊天模型：`SILICONFLOW_CHAT_MODEL`。
 - STT：`SILICONFLOW_STT_MODEL`。
 - TTS：`SILICONFLOW_TTS_VOICE`、`SILICONFLOW_TTS_RESPONSE_FORMAT`、`SILICONFLOW_TTS_SAMPLE_RATE`、`SILICONFLOW_TTS_SPEED`、`SILICONFLOW_TTS_GAIN`。
 

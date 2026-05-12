@@ -36,7 +36,7 @@ const chatRequestSchema = z.object({
     .optional(),
 });
 
-const CHAT_MODEL = 'Qwen/Qwen3-8B';
+const DEFAULT_CHAT_MODEL = 'Qwen/Qwen3-8B';
 
 /**
  * 解析会话标题。
@@ -150,7 +150,8 @@ export async function POST(req: Request) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: CHAT_MODEL,
+          model:
+            process.env.SILICONFLOW_CHAT_MODEL?.trim() || DEFAULT_CHAT_MODEL,
           messages,
           stream: true,
         }),
