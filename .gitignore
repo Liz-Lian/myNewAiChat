@@ -44,4 +44,5 @@ next-env.d.ts
 /postgres_data/
 
 /面试
-/bug日志
+/docs/更新日志/
+/bug日志/
