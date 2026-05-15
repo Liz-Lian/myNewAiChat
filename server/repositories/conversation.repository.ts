@@ -7,6 +7,39 @@
  */
 import prisma from '@/server/db/client';
 
+type ConversationSummary = {
+  id: string;
+  title: string;
+  isShared: boolean;
+  sharedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type ConversationMessage = {
+  id: string;
+  conversationId: string;
+  role: string;
+  content: string;
+  toolCalls: unknown;
+  createdAt: Date;
+};
+
+type ConversationWithMessages = ConversationSummary & {
+  userId: string;
+  messages: ConversationMessage[];
+};
+
+type PublicSharedConversation = ConversationSummary & {
+  shareToken: string | null;
+  user: {
+    id: string;
+    name: string | null;
+    email: string;
+  };
+  messages: ConversationMessage[];
+};
+
 export const conversationRepository = {
   /**
    * 获取指定用户的会话列表（按更新时间倒序）。
@@ -15,20 +48,18 @@ export const conversationRepository = {
    * @returns 当前用户的会话元信息列表。
    */
   listByUserId(userId: string) {
-    return prisma.conversation.findMany({
-      where: {
-        userId,
-      },
-      orderBy: {
-        updatedAt: 'desc',
-      },
-      select: {
-        id: true,
-        title: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
+    return prisma.$queryRaw<ConversationSummary[]>`
+      SELECT
+        "id",
+        "title",
+        "isShared",
+        "sharedAt",
+        "createdAt",
+        "updatedAt"
+      FROM "Conversation"
+      WHERE "userId" = ${userId}
+      ORDER BY "updatedAt" DESC
+    `;
   },
 
   /**
@@ -38,8 +69,8 @@ export const conversationRepository = {
    * @param title 会话标题。
    * @returns 新建会话的元信息。
    */
-  createForUser(userId: string, title: string) {
-    return prisma.conversation.create({
+  async createForUser(userId: string, title: string) {
+    const conversation = await prisma.conversation.create({
       data: {
         userId,
         title,
@@ -51,6 +82,12 @@ export const conversationRepository = {
         updatedAt: true,
       },
     });
+
+    return {
+      ...conversation,
+      isShared: false,
+      sharedAt: null,
+    };
   },
 
   /**
@@ -61,18 +98,18 @@ export const conversationRepository = {
    * @returns 找到时返回会话元信息，否则返回 `null`。
    */
   findOwnedById(userId: string, conversationId: string) {
-    return prisma.conversation.findFirst({
-      where: {
-        id: conversationId,
-        userId,
-      },
-      select: {
-        id: true,
-        title: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
+    return prisma.$queryRaw<ConversationSummary[]>`
+      SELECT
+        "id",
+        "title",
+        "isShared",
+        "sharedAt",
+        "createdAt",
+        "updatedAt"
+      FROM "Conversation"
+      WHERE "id" = ${conversationId} AND "userId" = ${userId}
+      LIMIT 1
+    `.then((rows) => rows[0] ?? null);
   },
 
   /**
@@ -121,17 +158,7 @@ export const conversationRepository = {
       return null;
     }
 
-    return prisma.conversation.findUnique({
-      where: {
-        id: conversationId,
-      },
-      select: {
-        id: true,
-        title: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
+    return conversationRepository.findOwnedById(userId, conversationId);
   },
 
   /**
@@ -168,5 +195,198 @@ export const conversationRepository = {
         id: true,
       },
     });
+  },
+
+  /**
+   * 获取当前用户拥有的会话及其消息。
+   *
+   * @param userId 当前用户 ID。
+   * @param conversationId 会话 ID。
+   * @returns 找到时返回会话详情和消息列表，否则返回 `null`。
+   */
+  async findOwnedWithMessages(
+    userId: string,
+    conversationId: string,
+  ): Promise<ConversationWithMessages | null> {
+    const conversations = await prisma.$queryRaw<
+      Array<ConversationSummary & { userId: string }>
+    >`
+      SELECT
+        "id",
+        "userId",
+        "title",
+        "isShared",
+        "sharedAt",
+        "createdAt",
+        "updatedAt"
+      FROM "Conversation"
+      WHERE "id" = ${conversationId} AND "userId" = ${userId}
+      LIMIT 1
+    `;
+    const conversation = conversations[0];
+
+    if (!conversation) {
+      return null;
+    }
+
+    const messages = await prisma.message.findMany({
+      where: {
+        conversationId,
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+      select: {
+        id: true,
+        conversationId: true,
+        role: true,
+        content: true,
+        toolCalls: true,
+        createdAt: true,
+      },
+    });
+
+    return {
+      ...conversation,
+      messages,
+    };
+  },
+
+  /**
+   * 开启指定用户会话的公开分享。
+   *
+   * @param userId 当前用户 ID。
+   * @param conversationId 会话 ID。
+   * @param shareToken 新生成的分享 token。
+   * @returns 更新后的分享字段；会话不存在或不属于当前用户时返回 `null`。
+   */
+  async enableShareOwned(
+    userId: string,
+    conversationId: string,
+    shareToken: string,
+  ) {
+    const rows = await prisma.$queryRaw<
+      Array<{
+        id: string;
+        shareToken: string | null;
+        isShared: boolean;
+        sharedAt: Date | null;
+      }>
+    >`
+      UPDATE "Conversation"
+      SET
+        "shareToken" = ${shareToken},
+        "isShared" = true,
+        "sharedAt" = NOW()
+      WHERE "id" = ${conversationId} AND "userId" = ${userId}
+      RETURNING "id", "shareToken", "isShared", "sharedAt"
+    `;
+
+    return rows[0] ?? null;
+  },
+
+  /**
+   * 取消指定用户会话的公开分享。
+   *
+   * @param userId 当前用户 ID。
+   * @param conversationId 会话 ID。
+   * @returns 更新后的分享字段；会话不存在或不属于当前用户时返回 `null`。
+   */
+  async disableShareOwned(userId: string, conversationId: string) {
+    const rows = await prisma.$queryRaw<
+      Array<{
+        id: string;
+        shareToken: string | null;
+        isShared: boolean;
+        sharedAt: Date | null;
+      }>
+    >`
+      UPDATE "Conversation"
+      SET
+        "shareToken" = NULL,
+        "isShared" = false,
+        "sharedAt" = NULL
+      WHERE "id" = ${conversationId} AND "userId" = ${userId}
+      RETURNING "id", "shareToken", "isShared", "sharedAt"
+    `;
+
+    return rows[0] ?? null;
+  },
+
+  /**
+   * 通过公开分享 token 获取会话详情。
+   *
+   * @param shareToken 公开分享 token。
+   * @returns 分享有效时返回会话、分享者和消息列表，否则返回 `null`。
+   */
+  async findPublicSharedByToken(
+    shareToken: string,
+  ): Promise<PublicSharedConversation | null> {
+    const conversations = await prisma.$queryRaw<
+      Array<
+        ConversationSummary & {
+          userId: string;
+          shareToken: string | null;
+          ownerId: string;
+          ownerName: string | null;
+          ownerEmail: string;
+        }
+      >
+    >`
+      SELECT
+        c."id",
+        c."userId",
+        c."title",
+        c."shareToken",
+        c."isShared",
+        c."sharedAt",
+        c."createdAt",
+        c."updatedAt",
+        u."id" AS "ownerId",
+        u."name" AS "ownerName",
+        u."email" AS "ownerEmail"
+      FROM "Conversation" c
+      INNER JOIN "User" u ON u."id" = c."userId"
+      WHERE c."shareToken" = ${shareToken} AND c."isShared" = true
+      LIMIT 1
+    `;
+    const conversation = conversations[0];
+
+    if (!conversation) {
+      return null;
+    }
+
+    const messages = await prisma.message.findMany({
+      where: {
+        conversationId: conversation.id,
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+      select: {
+        id: true,
+        conversationId: true,
+        role: true,
+        content: true,
+        toolCalls: true,
+        createdAt: true,
+      },
+    });
+
+    return {
+      id: conversation.id,
+      title: conversation.title,
+      shareToken: conversation.shareToken,
+      isShared: conversation.isShared,
+      sharedAt: conversation.sharedAt,
+      createdAt: conversation.createdAt,
+      updatedAt: conversation.updatedAt,
+      user: {
+        id: conversation.ownerId,
+        name: conversation.ownerName,
+        email: conversation.ownerEmail,
+      },
+      messages,
+    };
   },
 };

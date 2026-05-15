@@ -1,17 +1,25 @@
 import { create } from 'zustand';
 
+import {
+  ChatMessage,
+  ConversationSummary,
+  fetchConversationDetail,
+  fetchConversations,
+  removeConversation,
+  renameConversation,
+} from '@/app/features/chat/services/conversationService';
 import { consumeSseStream } from '@/lib/chat-sse';
 
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-}
+type Message = ChatMessage;
 
 type ChatStreamReader = ReadableStreamDefaultReader<Uint8Array>;
 
 interface ChatState {
   messages: Message[];
+  currentConversationId: string | null;
   conversationId: string | null;
+  conversations: ConversationSummary[];
+  conversationsLoading: boolean;
   /** 是否正在生成 AI 回复，即已发送用户消息且正在等待或接收回复。 */
   isGenerating: boolean;
   isLoading: boolean;
@@ -22,6 +30,13 @@ interface ChatState {
   currentController: AbortController | null;
   /** 当前请求的流读取器，用于取消流读取。 */
   currentReader: ChatStreamReader | null;
+  loadConversations: () => Promise<void>;
+  createNewConversation: () => Promise<void>;
+  switchConversation: (id: string) => Promise<void>;
+  deleteConversation: (id: string) => Promise<void>;
+  updateConversationTitle: (id: string, title: string) => Promise<void>;
+  setMessages: (messages: Message[]) => void;
+  clearMessages: () => void;
   sendMessage: (content: string) => Promise<void>;
   retryLastMessage: () => Promise<void>;
   stopGeneration: () => void;
@@ -34,6 +49,21 @@ interface ChatState {
 let requestSequence = 0;
 
 export const useChatStore = create<ChatState>((set, get) => {
+  /**
+   * 将后端消息转换为前端可渲染消息。
+   *
+   * @param messages 后端返回的消息列表。
+   * @returns 前端消息列表。
+   */
+  const normalizeMessages = (messages: Message[]): Message[] =>
+    messages
+      .filter((message) => ['user', 'assistant'].includes(message.role))
+      .map((message) => ({
+        ...message,
+        role: message.role,
+        content: message.content,
+      }));
+
   /**
    * 清理当前请求状态，但保留已展示的消息和会话 ID。
    */
@@ -52,6 +82,7 @@ export const useChatStore = create<ChatState>((set, get) => {
   const resetAllState = () => {
     set({
       messages: [],
+      currentConversationId: null,
       conversationId: null,
       isGenerating: false,
       isLoading: false,
@@ -123,7 +154,10 @@ export const useChatStore = create<ChatState>((set, get) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ messages, conversationId }),
+        body: JSON.stringify({
+          messages,
+          ...(conversationId ? { conversationId } : {}),
+        }),
         signal: controller.signal,
       });
 
@@ -137,11 +171,14 @@ export const useChatStore = create<ChatState>((set, get) => {
           return null;
         })) as {
           error?: unknown;
+          details?: unknown;
         } | null;
         const message =
-          typeof payload?.error === 'string'
-            ? payload.error
-            : '消息发送失败，请重试';
+          typeof payload?.details === 'string'
+            ? payload.details
+            : typeof payload?.error === 'string'
+              ? payload.error
+              : '消息发送失败，请重试';
 
         set({
           error: message,
@@ -177,6 +214,7 @@ export const useChatStore = create<ChatState>((set, get) => {
 
       set({
         currentReader: reader,
+        currentConversationId: responseConversationId || conversationId,
         conversationId: responseConversationId || conversationId,
       });
 
@@ -232,6 +270,10 @@ export const useChatStore = create<ChatState>((set, get) => {
         });
         return;
       }
+
+      if (responseConversationId || conversationId) {
+        await get().loadConversations();
+      }
     } catch (error) {
       if (controller.signal.aborted) {
         return;
@@ -257,7 +299,10 @@ export const useChatStore = create<ChatState>((set, get) => {
 
   return {
     messages: [],
+    currentConversationId: null,
     conversationId: null,
+    conversations: [],
+    conversationsLoading: false,
     isGenerating: false,
     isLoading: false,
     error: null,
@@ -270,6 +315,154 @@ export const useChatStore = create<ChatState>((set, get) => {
     stopGeneration: () => {
       stopCurrentRequest();
       set({ error: null });
+    },
+    /**
+     * 加载当前用户的所有会话。
+     */
+    loadConversations: async () => {
+      set({ conversationsLoading: true, error: null });
+
+      try {
+        const conversations = await fetchConversations();
+        set({ conversations, conversationsLoading: false });
+      } catch (error) {
+        set({
+          conversationsLoading: false,
+          error: error instanceof Error ? error.message : '获取会话列表失败',
+        });
+      }
+    },
+    /**
+     * 开启一个本地空白对话草稿。
+     */
+    createNewConversation: async () => {
+      stopCurrentRequest();
+      requestSequence += 1;
+      set({
+        messages: [],
+        currentConversationId: null,
+        conversationId: null,
+        error: null,
+      });
+    },
+    /**
+     * 切换到指定会话并加载消息。
+     *
+     * @param id 会话 ID。
+     */
+    switchConversation: async (id) => {
+      if (get().currentConversationId === id) {
+        return;
+      }
+
+      stopCurrentRequest();
+      requestSequence += 1;
+      set({
+        currentConversationId: id,
+        conversationId: id,
+        messages: [],
+        isLoading: true,
+        error: null,
+      });
+
+      try {
+        const conversation = await fetchConversationDetail(id);
+        set((state) => ({
+          messages: normalizeMessages(conversation.messages),
+          isLoading: false,
+          conversations: state.conversations.map((item) =>
+            item.id === conversation.id
+              ? {
+                  id: conversation.id,
+                  title: conversation.title,
+                  isShared: conversation.isShared,
+                  sharedAt: conversation.sharedAt,
+                  createdAt: conversation.createdAt,
+                  updatedAt: conversation.updatedAt,
+                }
+              : item,
+          ),
+        }));
+      } catch (error) {
+        set({
+          messages: [],
+          isLoading: false,
+          error: error instanceof Error ? error.message : '获取会话失败',
+        });
+      }
+    },
+    /**
+     * 删除指定会话。
+     *
+     * @param id 会话 ID。
+     */
+    deleteConversation: async (id) => {
+      stopCurrentRequest();
+
+      try {
+        await removeConversation(id);
+        set((state) => {
+          const conversations = state.conversations.filter(
+            (item) => item.id !== id,
+          );
+          const isCurrent = state.currentConversationId === id;
+
+          return {
+            conversations,
+            messages: isCurrent ? [] : state.messages,
+            currentConversationId: isCurrent
+              ? null
+              : state.currentConversationId,
+            conversationId: isCurrent ? null : state.conversationId,
+            error: null,
+          };
+        });
+      } catch (error) {
+        set({
+          error: error instanceof Error ? error.message : '删除会话失败',
+        });
+      }
+    },
+    /**
+     * 更新指定会话标题。
+     *
+     * @param id 会话 ID。
+     * @param title 新标题。
+     */
+    updateConversationTitle: async (id, title) => {
+      const trimmedTitle = title.trim();
+      if (!trimmedTitle) {
+        set({ error: '标题不能为空' });
+        return;
+      }
+
+      try {
+        const conversation = await renameConversation(id, trimmedTitle);
+        set((state) => ({
+          conversations: state.conversations.map((item) =>
+            item.id === id ? { ...item, ...conversation } : item,
+          ),
+          error: null,
+        }));
+      } catch (error) {
+        set({
+          error: error instanceof Error ? error.message : '重命名会话失败',
+        });
+      }
+    },
+    /**
+     * 直接替换当前消息列表。
+     *
+     * @param messages 新消息列表。
+     */
+    setMessages: (messages) => {
+      set({ messages: normalizeMessages(messages) });
+    },
+    /**
+     * 清空当前消息列表。
+     */
+    clearMessages: () => {
+      set({ messages: [] });
     },
     /**
      * 清空当前会话，并取消正在进行的生成。
@@ -314,7 +507,7 @@ export const useChatStore = create<ChatState>((set, get) => {
 
       await sendChatRequest(
         nextMessages,
-        get().conversationId,
+        get().currentConversationId,
         requestId,
         controller,
       );
@@ -337,7 +530,7 @@ export const useChatStore = create<ChatState>((set, get) => {
         content: trimmedContent,
       };
       const nextMessages: Message[] = [...get().messages, userMessage];
-      const currentConversationId = get().conversationId;
+      const currentConversationId = get().currentConversationId;
 
       set({
         messages: nextMessages,

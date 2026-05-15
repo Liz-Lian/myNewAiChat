@@ -55,7 +55,7 @@ export async function GET(req: Request, context: RouteContext) {
     /**
      * 通过 id + userId 双条件确保只能读取自己的会话。
      */
-    const conversation = await conversationRepository.findOwnedById(
+    const conversation = await conversationRepository.findOwnedWithMessages(
       userId,
       conversationId,
     );

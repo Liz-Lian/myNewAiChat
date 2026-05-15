@@ -1,6 +1,6 @@
 'use client';
 
-import { MoreVertical, Trash2 } from 'lucide-react';
+import { Link2, Link2Off, MoreVertical, Trash2 } from 'lucide-react';
 
 import { ModeToggle } from '@/components/mode-toggle';
 import { Button } from '@/components/ui/button';
@@ -14,9 +14,20 @@ import {
 interface ChatHeaderProps {
   title?: string;
   onDelete?: () => void;
+  onShare?: () => void;
+  onCancelShare?: () => void;
+  isShared?: boolean;
+  hasConversation?: boolean;
 }
 
-export function ChatHeader({ title = '新对话', onDelete }: ChatHeaderProps) {
+export function ChatHeader({
+  title = '新对话',
+  onDelete,
+  onShare,
+  onCancelShare,
+  isShared = false,
+  hasConversation = false,
+}: ChatHeaderProps) {
   return (
     <div className="border-border/50 bg-background/80 flex items-center justify-between border-b px-5 py-4 shadow-[0_1px_0_rgba(255,255,255,0.02)] backdrop-blur-xl md:px-6">
       <div className="flex min-w-0 items-center gap-3">
@@ -41,7 +52,24 @@ export function ChatHeader({ title = '新对话', onDelete }: ChatHeaderProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem
+              disabled={!hasConversation}
+              onClick={onShare}
+              className="cursor-pointer"
+            >
+              <Link2 className="mr-2 h-4 w-4" />
+              生成分享链接
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={!hasConversation || !isShared}
+              onClick={onCancelShare}
+              className="cursor-pointer"
+            >
+              <Link2Off className="mr-2 h-4 w-4" />
+              取消分享
+            </DropdownMenuItem>
+            <DropdownMenuItem
               onClick={onDelete}
+              disabled={!hasConversation}
               className="text-destructive cursor-pointer"
             >
               <Trash2 className="mr-2 h-4 w-4" />

@@ -14,7 +14,7 @@
 
 ## Session 机制
 
-- Cookie 名称是 `__Host-session`。
+- 生产环境 Cookie 名称是 `__Host-session`；开发环境使用 `session`，避免本地 HTTP 下 `__Host-` + `Secure` 约束导致 Cookie 不可用。
 - Cookie 配置：HttpOnly、sameSite lax、path `/`、生产环境 secure、7 天有效期。
 - JWT 使用 HS256，issuer 和 audience 都固定为项目值。
 - JWT subject 是用户 id，payload 包含 email 和 name。

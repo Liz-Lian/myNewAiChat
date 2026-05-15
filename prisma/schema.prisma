@@ -12,6 +12,9 @@ model Conversation {
   userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   title     String    @default("新对话")
+  shareToken String?   @unique
+  isShared  Boolean   @default(false)
+  sharedAt  DateTime?
   messages  Message[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

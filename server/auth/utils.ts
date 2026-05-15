@@ -16,6 +16,7 @@ import { verifySessionToken } from '@/server/auth/jwt';
 import { userRepository } from '@/server/repositories/user.repository';
 
 const SESSION_COOKIE_NAME = '__Host-session';
+const DEV_SESSION_COOKIE_NAME = 'session';
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 const AUTH_ERROR_MESSAGE = '请先登录';
 
@@ -63,15 +64,28 @@ function getCookieValue(
 }
 
 /**
+ * 获取当前环境使用的会话 Cookie 名称。
+ *
+ * @returns 生产环境返回 `__Host-session`，开发环境返回普通本地 Cookie 名称。
+ */
+function getSessionCookieName(): string {
+  return process.env.NODE_ENV === 'production'
+    ? SESSION_COOKIE_NAME
+    : DEV_SESSION_COOKIE_NAME;
+}
+
+/**
  * 获取统一的会话 Cookie 配置。
  *
  * @returns NextResponse Cookie API 可用的会话 Cookie 配置。
  */
 function getSessionCookieOptions() {
+  const isProduction = process.env.NODE_ENV === 'production';
+
   return {
     httpOnly: true,
     sameSite: 'lax' as const,
-    secure: true,
+    secure: isProduction,
     path: '/',
     maxAge: SESSION_TTL_SECONDS,
   };
@@ -84,7 +98,11 @@ function getSessionCookieOptions() {
  * @param token 已签发的会话 JWT。
  */
 export function setSessionCookie(response: NextResponse, token: string): void {
-  response.cookies.set(SESSION_COOKIE_NAME, token, getSessionCookieOptions());
+  response.cookies.set(
+    getSessionCookieName(),
+    token,
+    getSessionCookieOptions(),
+  );
 }
 
 /**
@@ -93,7 +111,7 @@ export function setSessionCookie(response: NextResponse, token: string): void {
  * @param response 需要附加清除 Cookie 指令的 Next.js 响应对象。
  */
 export function clearSessionCookie(response: NextResponse): void {
-  response.cookies.set(SESSION_COOKIE_NAME, '', {
+  response.cookies.set(getSessionCookieName(), '', {
     ...getSessionCookieOptions(),
     maxAge: 0,
     expires: new Date(0),
@@ -148,7 +166,7 @@ export async function getCurrentUserFromRequest(
 ): Promise<SessionUser | null> {
   const token = getCookieValue(
     request.headers.get('cookie'),
-    SESSION_COOKIE_NAME,
+    getSessionCookieName(),
   );
 
   if (!token) {
