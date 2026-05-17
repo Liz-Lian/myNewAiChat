@@ -1,3 +1,6 @@
+/**
+ * 本文件封装 scroll-area UI 基础组件。
+ */
 'use client';
 
 import * as React from 'react';
@@ -17,6 +20,7 @@ function ScrollArea({
   viewportProps,
   ...props
 }: ScrollAreaProps) {
+  // ScrollArea 包装 Radix viewport，并把外部 ref 接到真正滚动容器上。
   return (
     <ScrollAreaPrimitive.Root
       data-slot="scroll-area"
@@ -45,6 +49,7 @@ function ScrollBar({
   orientation = 'vertical',
   ...props
 }: React.ComponentProps<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>) {
+  // ScrollBar 按 orientation 切换横向/纵向尺寸，并渲染 Radix Thumb。
   return (
     <ScrollAreaPrimitive.ScrollAreaScrollbar
       data-slot="scroll-area-scrollbar"

@@ -1,3 +1,6 @@
+/**
+ * 本文件实现聊天页面顶部栏组件。
+ */
 'use client';
 
 import { Link2, Link2Off, MoreVertical, Trash2 } from 'lucide-react';
@@ -28,6 +31,7 @@ export function ChatHeader({
   isShared = false,
   hasConversation = false,
 }: ChatHeaderProps) {
+  // 标题栏把当前会话标题、分享状态和侧边栏按钮集中展示。
   return (
     <div className="border-border/50 bg-background/80 flex items-center justify-between border-b px-5 py-4 shadow-[0_1px_0_rgba(255,255,255,0.02)] backdrop-blur-xl md:px-6">
       <div className="flex min-w-0 items-center gap-3">

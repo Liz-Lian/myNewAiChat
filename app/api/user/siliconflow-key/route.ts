@@ -1,3 +1,6 @@
+/**
+ * 本文件实现 /api/user/siliconflow-key 接口的 Next.js Route Handler。
+ */
 import { z } from 'zod';
 
 import {
@@ -28,6 +31,7 @@ const updateSiliconFlowApiKeySchema = z.object({
  */
 export async function PATCH(req: Request) {
   try {
+    // API Key 只能写到当前登录用户，不能接受客户端指定用户 ID。
     const userId = await requireCurrentUserId(req);
     const body = await req.json().catch(() => null);
     const parsed = updateSiliconFlowApiKeySchema.safeParse(body);
@@ -40,10 +44,12 @@ export async function PATCH(req: Request) {
       );
     }
 
+    // 空字符串按清空处理，非空值才写入数据库。
     const normalizedApiKey = parsed.data.apiKey?.trim() || null;
 
     await userRepository.updateSiliconflowApiKey(userId, normalizedApiKey);
 
+    // 出于安全考虑，响应只告诉前端是否已配置，不回显完整 API Key。
     return Response.json(
       {
         message: normalizedApiKey ? 'API Key 已更新' : 'API Key 已清空',

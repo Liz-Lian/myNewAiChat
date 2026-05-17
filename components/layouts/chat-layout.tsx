@@ -1,3 +1,6 @@
+/**
+ * 本文件实现聊天页面整体布局组件。
+ */
 import { ReactNode } from 'react';
 import { PanelLeftOpen } from 'lucide-react';
 

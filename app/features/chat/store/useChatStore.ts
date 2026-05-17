@@ -1,3 +1,6 @@
+/**
+ * 本文件定义聊天 Zustand 状态仓库和消息流式更新逻辑。
+ */
 import { create } from 'zustand';
 
 import {
@@ -110,6 +113,7 @@ export const useChatStore = create<ChatState>((set, get) => {
     conversations: ConversationSummary[],
     query: string,
   ) => {
+    // 搜索词统一 trim + 小写，保证侧边栏过滤不受空格和大小写影响。
     const keyword = query.trim().toLowerCase();
     if (!keyword) {
       return conversations;
@@ -124,6 +128,7 @@ export const useChatStore = create<ChatState>((set, get) => {
    * 清理当前请求状态，但保留已展示的消息和会话 ID。
    */
   const clearActiveRequest = () => {
+    // 请求结束后只清理流控制状态，不动已经渲染出来的消息内容。
     set({
       isGenerating: false,
       isLoading: false,
@@ -138,6 +143,7 @@ export const useChatStore = create<ChatState>((set, get) => {
    * 清理整段会话状态，包括消息、会话 ID、错误和请求控制对象。
    */
   const resetAllState = () => {
+    // 切出当前会话时同时清掉请求控制对象，避免旧请求继续写入新会话。
     set({
       messages: [],
       currentConversationId: null,
@@ -156,6 +162,7 @@ export const useChatStore = create<ChatState>((set, get) => {
    * 中断当前聊天请求并取消正在读取的流。
    */
   const stopCurrentRequest = () => {
+    // AbortController 停止 fetch，reader.cancel 停止前端继续消费 SSE。
     const { currentController, currentReader } = get();
 
     currentController?.abort();
@@ -179,6 +186,7 @@ export const useChatStore = create<ChatState>((set, get) => {
    * @param requestId 需要收尾的请求 ID。
    */
   const finalizeRequest = (requestId: number) => {
+    // 只允许最新请求收尾，避免旧请求 finally 把新请求的 loading 状态清掉。
     if (!isCurrentRequest(requestId)) {
       return;
     }
@@ -186,6 +194,7 @@ export const useChatStore = create<ChatState>((set, get) => {
     const { currentReader } = get();
     if (currentReader) {
       try {
+        // releaseLock 让底层 ReadableStream 不再被当前 reader 占用。
         currentReader.releaseLock();
       } catch (error) {
         console.warn('Failed to release reader lock:', error);
@@ -212,6 +221,7 @@ export const useChatStore = create<ChatState>((set, get) => {
     regeneration?: RegenerationRequest,
   ) => {
     try {
+      // 只把非空消息发给后端，避免空 assistant 占位污染模型上下文。
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -226,10 +236,12 @@ export const useChatStore = create<ChatState>((set, get) => {
       });
 
       if (!isCurrentRequest(requestId)) {
+        // 请求已过期时不要继续更新状态，避免快速切换会话后的串流写错位置。
         return;
       }
 
       if (!response.ok) {
+        // 后端错误优先展示 details，其次展示 error，最后用本地兜底文案。
         const payload = (await response.json().catch((error) => {
           console.warn('Failed to parse error response:', error);
           return null;
@@ -258,6 +270,7 @@ export const useChatStore = create<ChatState>((set, get) => {
       }
 
       if (!response.body) {
+        // 没有响应体就无法读取 SSE，这里直接恢复 UI 状态并提示用户。
         set({
           error: '未收到流式响应',
           isGenerating: false,
@@ -277,6 +290,7 @@ export const useChatStore = create<ChatState>((set, get) => {
         response.headers.get('x-message-id') || targetAssistantMessageId;
       const responseUserMessageId = response.headers.get('x-user-message-id');
       if (!isCurrentRequest(requestId)) {
+        // 如果拿到 reader 后请求才过期，需要主动 cancel 释放网络流。
         await reader.cancel().catch((error) => {
           console.warn('Failed to cancel stale reader:', error);
         });
@@ -284,6 +298,7 @@ export const useChatStore = create<ChatState>((set, get) => {
       }
 
       set({
+        // 后端通过响应头返回真实会话和消息 ID，用来替换本地临时状态。
         currentReader: reader,
         currentConversationId: responseConversationId || conversationId,
         conversationId: responseConversationId || conversationId,
@@ -293,6 +308,7 @@ export const useChatStore = create<ChatState>((set, get) => {
 
       if (responseUserMessageId) {
         set((state) => {
+          // 首次发送时本地 user 消息还没有数据库 ID，这里补上服务端返回的 ID。
           const nextMessages = [...state.messages];
           const lastUserIndex = nextMessages.findLastIndex(
             (message) => message.role === 'user' && !message.id,
@@ -322,6 +338,7 @@ export const useChatStore = create<ChatState>((set, get) => {
 
       if (responseMessageId) {
         set((state) => {
+          // 后端已经创建 assistant 占位时，前端也插入同 ID 的空消息承接 delta。
           const hasAssistantPlaceholder = state.messages.some(
             (message) => message.id === responseMessageId,
           );
@@ -360,6 +377,7 @@ export const useChatStore = create<ChatState>((set, get) => {
 
           let delta = rawDelta;
           if (!accumulatedContent) {
+            // 第一段增量常带模型输出前导换行，去掉它可以避免回答顶部空一行。
             delta = delta.replace(/^\r?\n+/, '');
             if (!delta) {
               return;
@@ -369,6 +387,7 @@ export const useChatStore = create<ChatState>((set, get) => {
           accumulatedContent += delta;
 
           if (!hasStartedAssistant) {
+            // 没有服务端消息 ID 的场景下，用第一段 delta 创建 assistant 消息。
             hasStartedAssistant = true;
             const assistantMessage: Message = {
               ...(responseMessageId ? { id: responseMessageId } : {}),
@@ -390,6 +409,7 @@ export const useChatStore = create<ChatState>((set, get) => {
           }
 
           set((state) => {
+            // 后续 delta 都更新同一条 assistant 消息，形成打字机效果。
             const nextMessages = [...state.messages];
             const assistantIndex = responseMessageId
               ? nextMessages.findIndex(
@@ -414,6 +434,7 @@ export const useChatStore = create<ChatState>((set, get) => {
       });
 
       if (consumeStatus === 'stopped') {
+        // 本地判定请求失效时，取消 reader，避免旧流继续占用连接。
         await reader.cancel().catch((error) => {
           console.warn('Failed to cancel stale reader:', error);
         });
@@ -422,6 +443,7 @@ export const useChatStore = create<ChatState>((set, get) => {
 
       if (responseConversationId || conversationId) {
         if (responseMessageId) {
+          // 流正常结束后，把 assistant 消息标记为完整回复。
           set((state) => ({
             messages: state.messages.map((message) =>
               message.id === responseMessageId
@@ -431,14 +453,17 @@ export const useChatStore = create<ChatState>((set, get) => {
           }));
         }
 
+        // 静默刷新侧边栏，让最新标题、更新时间和分享状态跟上数据库。
         await get().loadConversations({ silent: true });
       }
     } catch (error) {
       if (controller.signal.aborted) {
+        // 用户主动停止生成时不显示错误提示。
         return;
       }
 
       if (!isCurrentRequest(requestId)) {
+        // 过期请求的异常不应该覆盖当前会话的错误状态。
         return;
       }
 

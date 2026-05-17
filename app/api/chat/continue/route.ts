@@ -34,6 +34,7 @@ const DEFAULT_CHAT_MODEL = 'Qwen/Qwen3-8B';
  * @returns SSE 字符串。
  */
 function createDeltaEvent(content: string): string {
+  // 前端复用普通聊天流解析逻辑，所以续传内容也包装成 choices.delta.content。
   return `data: ${JSON.stringify({
     choices: [
       {
@@ -56,6 +57,7 @@ function createDeltaEvent(content: string): string {
  */
 export async function POST(req: Request) {
   try {
+    // 续传必须确认当前用户，防止通过 messageId 读取其它用户的生成任务。
     const userId = await requireCurrentUserId(req);
     const user = await userRepository.findById(userId);
 
@@ -63,9 +65,9 @@ export async function POST(req: Request) {
       return createUnauthorizedResponse('会话已失效，请重新登录');
     }
 
-    const parsed = continueRequestSchema.safeParse(
-      await req.json().catch(() => null),
-    );
+    // 请求体只接受会话 ID 和 assistant 消息 ID，其它内容全部忽略。
+    const requestBody = await req.json().catch(() => null);
+    const parsed = continueRequestSchema.safeParse(requestBody);
 
     if (!parsed.success) {
       return createJsonError(
@@ -76,6 +78,7 @@ export async function POST(req: Request) {
     }
 
     const { conversationId, messageId } = parsed.data;
+    // 读取会话时带上 userId 过滤，确保 messageId 必须属于当前用户的会话。
     const conversation = await conversationRepository.findOwnedWithMessages(
       userId,
       conversationId,
@@ -85,6 +88,7 @@ export async function POST(req: Request) {
       return createJsonError('会话不存在', 404);
     }
 
+    // 续传只允许 assistant 消息；用户消息没有可补发的模型内容。
     const targetMessage = conversation.messages.find(
       (message) => message.id === messageId,
     );
@@ -93,6 +97,7 @@ export async function POST(req: Request) {
       return createJsonError('消息不存在', 404);
     }
 
+    // 内存任务失效时会降级请求上游模型续写，所以仍然需要用户自己的 API Key。
     const apiKey = user.siliconflowApiKey?.trim();
     if (!apiKey) {
       return createJsonError(
@@ -104,6 +109,7 @@ export async function POST(req: Request) {
     generationTaskManager.cleanupOldTasks();
     const task = generationTaskManager.getTask(messageId);
 
+    // 任务已经失败时不要盲目续传，提示用户走重试生成更明确。
     if (
       task?.status === 'error' &&
       task.userId === userId &&
@@ -117,6 +123,7 @@ export async function POST(req: Request) {
     }
 
     const encoder = new TextEncoder();
+    // 只有任务归属完全匹配时，才允许使用内存里的断点内容。
     const canResumeTask =
       task && task.userId === userId && task.conversationId === conversationId;
     const unsentContent = canResumeTask
@@ -127,6 +134,7 @@ export async function POST(req: Request) {
       async start(controller) {
         try {
           if (canResumeTask) {
+            // 内存任务还在时，直接补发 fullContent 中尚未 sent 的部分。
             generationTaskManager.resumeTask(messageId);
 
             if (unsentContent) {
@@ -137,6 +145,7 @@ export async function POST(req: Request) {
             }
 
             const latestTask = generationTaskManager.getTask(messageId);
+            // 补发后把完整内容重新落库，确保刷新页面也能看到最新文本。
             await messageRepository.updateContent(
               messageId,
               latestTask?.fullContent ?? task.fullContent,
@@ -147,6 +156,7 @@ export async function POST(req: Request) {
             const targetIndex = conversation.messages.findIndex(
               (message) => message.id === messageId,
             );
+            // 只把目标消息之前的有效 user/assistant 文本发给模型，避免空消息污染上下文。
             const messagesForModel = [
               ...conversation.messages
                 .slice(0, targetIndex + 1)
@@ -165,6 +175,7 @@ export async function POST(req: Request) {
                   '请从上一条助手回复中断的位置继续生成，不要重复已经给出的内容。',
               },
             ];
+            // 没有内存任务时，请模型根据已有上下文继续写，不保证完全无重复。
             const upstreamResponse = await fetch(
               joinSiliconFlowUrl(
                 process.env.SILICONFLOW_BASE_URL?.trim() ||
@@ -214,6 +225,7 @@ export async function POST(req: Request) {
             let continuedContent = '';
 
             try {
+              // 上游 chunk 原样转给前端，同时把 delta 累加起来用于追加落库。
               await consumeSseStream({
                 reader: upstreamReader,
                 onChunk: (chunk) => {
@@ -228,6 +240,7 @@ export async function POST(req: Request) {
             }
 
             if (continuedContent.trim()) {
+              // 续写内容只追加到原 assistant 消息末尾，不新建一条 assistant 消息。
               await messageRepository.appendContent(
                 messageId,
                 continuedContent,
@@ -236,6 +249,7 @@ export async function POST(req: Request) {
             }
           }
 
+          // complete 事件让前端知道续传流自然结束，可以把消息标记为完成。
           controller.enqueue(
             encoder.encode(
               `data: ${JSON.stringify({ type: 'complete', messageId })}\n\n`,
@@ -244,6 +258,7 @@ export async function POST(req: Request) {
           controller.close();
         } catch (error) {
           console.error('Continue Chat Error:', error);
+          // 续传失败也走 SSE error 帧，前端不用额外处理 fetch 异常格式。
           controller.enqueue(
             encoder.encode(
               `data: ${JSON.stringify({ error: '续传失败，请稍后重试' })}\n\n`,
@@ -253,6 +268,7 @@ export async function POST(req: Request) {
         }
       },
       cancel() {
+        // 客户端主动断开时，保留任务进度，下一次还能继续补发。
         generationTaskManager.pauseTask(messageId);
       },
     });
@@ -268,6 +284,7 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     if (error instanceof Error && error.message === '请先登录') {
+      // 登录态错误统一转换为 401 JSON。
       return createUnauthorizedResponse();
     }
 

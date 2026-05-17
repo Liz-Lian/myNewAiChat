@@ -1,3 +1,6 @@
+/**
+ * 本文件实现明暗主题切换按钮组件。
+ */
 'use client';
 
 import { LaptopMinimal, MoonStar, SunMedium } from 'lucide-react';
@@ -12,6 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export function ModeToggle() {
+  // 根据当前主题显示太阳/月亮图标，并在点击时切换 light/dark。
   const { setTheme } = useTheme();
 
   return (

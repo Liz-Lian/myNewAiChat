@@ -1,3 +1,6 @@
+/**
+ * 本文件封装 dropdown-menu UI 基础组件。
+ */
 'use client';
 
 import * as React from 'react';
@@ -10,12 +13,14 @@ import { Tick02Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons';
 function DropdownMenu({
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
+  // Root 保留 Radix DropdownMenu 的打开状态和键盘交互。
   return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
 }
 
 function DropdownMenuPortal({
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Portal>) {
+  // Portal 把菜单内容挂到 body 层，避免被父级布局裁剪。
   return (
     <DropdownMenuPrimitive.Portal data-slot="dropdown-menu-portal" {...props} />
   );
@@ -24,6 +29,7 @@ function DropdownMenuPortal({
 function DropdownMenuTrigger({
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Trigger>) {
+  // Trigger 透传 Radix 触发器能力，按钮外观由调用方决定。
   return (
     <DropdownMenuPrimitive.Trigger
       data-slot="dropdown-menu-trigger"
@@ -38,6 +44,7 @@ function DropdownMenuContent({
   sideOffset = 4,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
+  // Content 统一菜单面板尺寸、动效和偏移距离。
   return (
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
@@ -57,6 +64,7 @@ function DropdownMenuContent({
 function DropdownMenuGroup({
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Group>) {
+  // Group 透传 Radix 分组语义，用于组织一组菜单项。
   return (
     <DropdownMenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />
   );
@@ -71,6 +79,7 @@ function DropdownMenuItem({
   inset?: boolean;
   variant?: 'default' | 'destructive';
 }) {
+  // Item 统一普通菜单项的焦点、禁用和危险态样式。
   return (
     <DropdownMenuPrimitive.Item
       data-slot="dropdown-menu-item"
@@ -94,6 +103,7 @@ function DropdownMenuCheckboxItem({
 }: React.ComponentProps<typeof DropdownMenuPrimitive.CheckboxItem> & {
   inset?: boolean;
 }) {
+  // CheckboxItem 在普通菜单项基础上增加左侧勾选图标槽位。
   return (
     <DropdownMenuPrimitive.CheckboxItem
       data-slot="dropdown-menu-checkbox-item"
@@ -121,6 +131,7 @@ function DropdownMenuCheckboxItem({
 function DropdownMenuRadioGroup({
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.RadioGroup>) {
+  // RadioGroup 透传 Radix 单选分组，用于互斥选项。
   return (
     <DropdownMenuPrimitive.RadioGroup
       data-slot="dropdown-menu-radio-group"
@@ -137,6 +148,7 @@ function DropdownMenuRadioItem({
 }: React.ComponentProps<typeof DropdownMenuPrimitive.RadioItem> & {
   inset?: boolean;
 }) {
+  // RadioItem 在左侧显示选中圆点，表示当前单选值。
   return (
     <DropdownMenuPrimitive.RadioItem
       data-slot="dropdown-menu-radio-item"
@@ -167,6 +179,7 @@ function DropdownMenuLabel({
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Label> & {
   inset?: boolean;
 }) {
+  // Label 用于菜单分区标题，并支持 inset 对齐子菜单文字。
   return (
     <DropdownMenuPrimitive.Label
       data-slot="dropdown-menu-label"
@@ -184,6 +197,7 @@ function DropdownMenuSeparator({
   className,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Separator>) {
+  // Separator 提供菜单分区之间的细分割线。
   return (
     <DropdownMenuPrimitive.Separator
       data-slot="dropdown-menu-separator"
@@ -197,6 +211,7 @@ function DropdownMenuShortcut({
   className,
   ...props
 }: React.ComponentProps<'span'>) {
+  // Shortcut 固定到菜单项右侧，展示快捷键提示。
   return (
     <span
       data-slot="dropdown-menu-shortcut"
@@ -212,6 +227,7 @@ function DropdownMenuShortcut({
 function DropdownMenuSub({
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Sub>) {
+  // Sub 透传 Radix 子菜单状态管理。
   return <DropdownMenuPrimitive.Sub data-slot="dropdown-menu-sub" {...props} />;
 }
 
@@ -223,6 +239,7 @@ function DropdownMenuSubTrigger({
 }: React.ComponentProps<typeof DropdownMenuPrimitive.SubTrigger> & {
   inset?: boolean;
 }) {
+  // SubTrigger 在右侧显示箭头，表示还有下一级菜单。
   return (
     <DropdownMenuPrimitive.SubTrigger
       data-slot="dropdown-menu-sub-trigger"
@@ -247,6 +264,7 @@ function DropdownMenuSubContent({
   className,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.SubContent>) {
+  // SubContent 统一子菜单浮层的尺寸、边框和进入动效。
   return (
     <DropdownMenuPrimitive.SubContent
       data-slot="dropdown-menu-sub-content"

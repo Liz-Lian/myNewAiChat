@@ -1,3 +1,6 @@
+/**
+ * 本文件实现 /api/conversations/[conversationId]/share 接口的 Next.js Route Handler。
+ */
 import { randomBytes } from 'crypto';
 
 import {
@@ -21,6 +24,7 @@ type RouteContext = {
  * @returns URL 安全的随机 token。
  */
 function createShareToken(): string {
+  // 先处理前置条件，再执行状态更新或持久化操作。
   return randomBytes(24).toString('base64url');
 }
 
@@ -32,6 +36,7 @@ function createShareToken(): string {
  * @returns 分享 token 和分享链接；未登录、无归属或失败时返回结构化 JSON 错误。
  */
 export async function POST(req: Request, context: RouteContext) {
+  // 先按接口职责校验请求，再执行业务处理并返回响应。
   try {
     const userId = await requireCurrentUserId(req);
     const { conversationId } = await context.params;
@@ -78,6 +83,7 @@ export async function POST(req: Request, context: RouteContext) {
  * @returns 取消分享后的状态；未登录、无归属或失败时返回结构化 JSON 错误。
  */
 export async function DELETE(req: Request, context: RouteContext) {
+  // 先按接口职责校验请求，再执行业务处理并返回响应。
   try {
     const userId = await requireCurrentUserId(req);
     const { conversationId } = await context.params;

@@ -29,10 +29,12 @@ export function LoginDialog({
   error,
   onLogin,
 }: LoginDialogProps) {
+  // 邮箱和密码只保存在弹窗本地状态，提交成功后清空密码。
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const handleSubmit: ComponentProps<'form'>['onSubmit'] = async (event) => {
+    // 阻止浏览器刷新页面，并在字段不完整或正在登录时忽略提交。
     event.preventDefault();
     if (!email.trim() || !password || loading) {
       return;

@@ -1,8 +1,12 @@
+/**
+ * 本文件封装 input UI 基础组件。
+ */
 import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
 function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
+  // 统一给原生 input 合并项目里的边框、焦点和禁用态样式。
   return (
     <input
       type={type}

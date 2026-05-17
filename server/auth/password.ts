@@ -16,6 +16,7 @@ const SALT_ROUNDS = 10;
  * @returns 可持久化保存的密码哈希。
  */
 export async function hashPassword(password: string): Promise<string> {
+  // bcrypt 内部会生成盐值，这里只传入成本因子控制哈希强度。
   return bcrypt.hash(password, SALT_ROUNDS);
 }
 
@@ -30,5 +31,6 @@ export async function verifyPassword(
   password: string,
   passwordHash: string,
 ): Promise<boolean> {
+  // compare 会从 hash 中读取盐值和成本参数，然后校验明文密码。
   return bcrypt.compare(password, passwordHash);
 }

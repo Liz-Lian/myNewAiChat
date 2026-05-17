@@ -21,6 +21,7 @@ interface MessageContentProps {
 }
 
 export function MessageContent({ content, role }: MessageContentProps) {
+  // ReactMarkdown 负责解析 GFM 和代码高亮，具体标签样式交给 createMarkdownComponents。
   return (
     <div
       className={cn(

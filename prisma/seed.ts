@@ -1,3 +1,6 @@
+/**
+ * 本文件作为 Prisma seed 入口，调用服务端 seed 逻辑初始化数据。
+ */
 import { config } from 'dotenv';
 
 /**

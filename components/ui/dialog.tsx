@@ -1,3 +1,6 @@
+/**
+ * 本文件封装 dialog UI 基础组件。
+ */
 'use client';
 
 import * as React from 'react';
@@ -9,24 +12,28 @@ import { cn } from '@/lib/utils';
 function Dialog({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Root>) {
+  // Root 保留 Radix Dialog 状态管理，并补充 data-slot 便于样式定位。
   return <DialogPrimitive.Root data-slot="dialog" {...props} />;
 }
 
 function DialogTrigger({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
+  // Trigger 只透传 Radix 触发器能力，调用方决定具体按钮样式。
   return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
 }
 
 function DialogPortal({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Portal>) {
+  // Portal 把弹窗内容挂到 body 层，避免被父级 overflow 裁剪。
   return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
 }
 
 function DialogClose({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Close>) {
+  // Close 透传 Radix 关闭能力，常用于自定义关闭按钮。
   return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
 }
 
@@ -34,6 +41,7 @@ function DialogOverlay({
   className,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
+  // Overlay 覆盖整个视口，并提供打开/关闭时的淡入淡出样式。
   return (
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
@@ -54,6 +62,7 @@ function DialogContent({
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean;
 }) {
+  // Content 组合 Portal、Overlay 和弹窗主体，并可按需隐藏默认关闭按钮。
   return (
     <DialogPortal>
       <DialogOverlay />
@@ -81,6 +90,7 @@ function DialogContent({
 }
 
 function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
+  // Header 统一弹窗标题区的纵向间距和左对齐。
   return (
     <div
       data-slot="dialog-header"
@@ -91,6 +101,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
 }
 
 function DialogFooter({ className, ...props }: React.ComponentProps<'div'>) {
+  // Footer 在移动端反向堆叠按钮，桌面端改为右对齐横排。
   return (
     <div
       data-slot="dialog-footer"
@@ -107,6 +118,7 @@ function DialogTitle({
   className,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Title>) {
+  // Title 透传 Radix 标题语义，同时统一标题字号。
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
@@ -120,6 +132,7 @@ function DialogDescription({
   className,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Description>) {
+  // Description 透传 Radix 描述语义，同时统一辅助文案样式。
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"

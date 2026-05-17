@@ -1,3 +1,5 @@
+<!-- 本文件记录database-guide相关的项目说明与协作指南。 -->
+
 # 数据库和 Prisma 指南
 
 处理 Prisma schema、迁移、seed、repository 和数据库相关 API 时阅读本文件。

@@ -1,3 +1,6 @@
+/**
+ * 本文件实现主题上下文、系统主题同步和主题切换 Hook。
+ */
 'use client';
 
 import {
@@ -41,6 +44,7 @@ const DARK_QUERY = '(prefers-color-scheme: dark)';
  * @returns 最终浅色或深色主题。
  */
 function resolveTheme(theme: Theme, enableSystem: boolean) {
+  // 用户显式选择 light/dark 时直接采用；只有 system 才读取系统媒体查询。
   if (theme !== 'system' || !enableSystem) {
     return theme === 'dark' ? 'dark' : 'light';
   }
@@ -54,6 +58,7 @@ function resolveTheme(theme: Theme, enableSystem: boolean) {
  * @returns 清理函数。
  */
 function disableTransitions() {
+  // 注入一段临时 style，防止切主题时所有颜色过渡一起闪烁。
   const style = document.createElement('style');
   style.appendChild(
     document.createTextNode('*,*::before,*::after{transition:none!important}'),
@@ -74,6 +79,7 @@ export function ThemeProvider({
   enableSystem = true,
   disableTransitionOnChange = false,
 }: ThemeProviderProps) {
+  // theme 是用户选择值，真正写到 html 上的 light/dark 由 applyTheme 计算。
   const [theme, setThemeState] = useState<Theme>(defaultTheme);
 
   const applyTheme = useCallback(
@@ -140,5 +146,6 @@ export function ThemeProvider({
 }
 
 export function useTheme() {
+  // 组件通过这个 Hook 读取当前主题并触发主题切换。
   return useContext(ThemeContext);
 }

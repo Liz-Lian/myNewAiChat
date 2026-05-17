@@ -18,6 +18,7 @@ interface CopyButtonProps {
 }
 
 export function CopyButton({ code, className }: CopyButtonProps) {
+  // copied 只控制按钮上的短暂“已复制”反馈。
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -33,6 +34,7 @@ export function CopyButton({ code, className }: CopyButtonProps) {
   }, [copied]);
 
   const handleCopy = async () => {
+    // 空代码块不触发剪贴板写入，避免覆盖用户已有剪贴板内容。
     if (!code) {
       return;
     }

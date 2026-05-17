@@ -1,3 +1,6 @@
+/**
+ * 本文件实现 /api/share/[shareToken] 接口的 Next.js Route Handler。
+ */
 import { createJsonError } from '@/server/auth/utils';
 import { conversationRepository } from '@/server/repositories/conversation.repository';
 
@@ -19,6 +22,7 @@ type RouteContext = {
  * @returns 公开分享会话详情；分享不存在或已失效时返回 404。
  */
 export async function GET(_req: Request, context: RouteContext) {
+  // 先按接口职责校验请求，再执行业务处理并返回响应。
   try {
     const { shareToken } = await context.params;
     const conversation =

@@ -1,3 +1,6 @@
+/**
+ * 本文件实现聊天输入框及语音输入相关交互。
+ */
 'use client';
 
 /**
@@ -33,15 +36,18 @@ export function MessageInput({
   isGenerating,
   error,
 }: MessageInputProps) {
+  // 输入框内容本地维护，发送成功后立即清空，等待 store 追加用户消息。
   const [input, setInput] = useState('');
 
   const recorder = useVoiceRecorder({
     onTranscript: (transcript) => {
+      // 语音识别完成后直接回填输入框，用户仍可编辑后再发送。
       setInput(transcript);
     },
   });
 
   const handleSend = () => {
+    // 只有非空文本、非禁用态、非语音识别处理中才允许发送。
     if (input.trim() && !disabled && !recorder.isProcessing) {
       onSend(input);
       setInput('');
@@ -49,6 +55,7 @@ export function MessageInput({
   };
 
   const handleToggleRecording = () => {
+    // 录音中点击按钮表示停止；非录音中点击则申请麦克风并开始录音。
     if (recorder.isRecording) {
       recorder.stopRecording();
       return;

@@ -23,6 +23,7 @@ interface CodeBlockProps {
  * 例如："language-javascript" -> "javascript"
  */
 function getLanguage(className?: string) {
+  // react-markdown 会把代码语言放进 language-xxx className。
   const match = /language-([\w-]+)/.exec(className ?? '');
   return match?.[1] ?? 'code';
 }
@@ -32,6 +33,7 @@ function getLanguage(className?: string) {
  * 处理字符串、数组和其他类型的节点
  */
 function extractText(node: ReactNode): string {
+  // 代码内容可能被 react-markdown 拆成字符串、数字或嵌套节点，需要递归取文本。
   if (typeof node === 'string' || typeof node === 'number') {
     return String(node);
   }
@@ -52,10 +54,12 @@ function extractText(node: ReactNode): string {
 }
 
 function getCodeString(children: ReactNode) {
+  // react-markdown 会把代码语言放进 language-xxx className。
   return extractText(children);
 }
 
 export function CodeBlock({ inline, className, children }: CodeBlockProps) {
+  // 去掉代码块末尾多余换行，避免复制时多带一个空行。
   const code = getCodeString(children).replace(/\n$/, '');
   const isInline = inline ?? !className?.includes('language-');
 

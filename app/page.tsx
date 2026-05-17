@@ -1,3 +1,6 @@
+/**
+ * 本文件实现 AI 聊天应用首页，串联会话、消息和分享交互。
+ */
 'use client';
 import { useEffect, useState } from 'react';
 import { Check, Copy } from 'lucide-react';
@@ -25,6 +28,7 @@ import {
 import { Input } from '@/components/ui/input';
 
 export default function Home() {
+  // 手动分享弹窗状态只在剪贴板不可用或复制失败时使用。
   const [manualShareUrl, setManualShareUrl] = useState<string | null>(null);
   const [manualShareCopied, setManualShareCopied] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -55,18 +59,22 @@ export default function Home() {
   } = useChatStore();
 
   const handleSendMessage = (content: string) => {
+    // 空消息和正在发送中的消息不进入 store，避免重复创建请求。
     if (!content.trim() || isLoading) return;
     sendMessage(content);
   };
 
   const handleNewChat = async () => {
+    // 新对话只重置本地草稿，真正会话会在第一条消息发送时创建。
     await createNewConversation();
     toast.success('已开启新对话');
   };
 
   const handleDeleteConversation = async (id: string | null) => {
+    // 没有选中会话时删除按钮不会产生任何后端请求。
     if (!id) return;
 
+    // 删除不可恢复，所以这里保留浏览器确认框防止误点。
     const confirmed = window.confirm('确定删除这个会话吗？此操作不可恢复。');
     if (!confirmed) return;
 
@@ -75,11 +83,13 @@ export default function Home() {
   };
 
   const handleRenameConversation = async (id: string, title: string) => {
+    // 侧边栏内联编辑提交后，交给 store 同步更新本地列表。
     await updateConversationTitle(id, title);
     toast.success('会话标题已更新');
   };
 
   const copyShareUrl = async (shareUrl: string) => {
+    // 某些浏览器或非安全上下文没有剪贴板 API，需要回退到手动复制。
     if (!navigator.clipboard?.writeText) {
       return false;
     }
@@ -93,9 +103,11 @@ export default function Home() {
   };
 
   const handleShareConversation = async () => {
+    // 分享动作必须针对当前会话，没有会话 ID 时直接忽略。
     if (!currentConversationId) return;
 
     try {
+      // 生成分享链接后刷新侧边栏，让分享状态和时间立即显示出来。
       const result = await shareConversation(currentConversationId);
       await loadConversations();
       const copied = await copyShareUrl(result.shareUrl);
@@ -114,6 +126,7 @@ export default function Home() {
   };
 
   const handleManualCopyShareUrl = async () => {
+    // 弹窗里没有可复制链接时，不触发剪贴板操作。
     if (!manualShareUrl) return;
 
     const copied = await copyShareUrl(manualShareUrl);
@@ -127,6 +140,7 @@ export default function Home() {
   };
 
   const handleCancelShare = async () => {
+    // 取消分享同样依赖当前会话 ID，用它清空服务端分享 token。
     if (!currentConversationId) return;
 
     try {
@@ -154,6 +168,7 @@ export default function Home() {
 
   const handleToggleSidebar = () => {
     setSidebarCollapsed((current) => {
+      // 折叠状态写入 localStorage，下次进入页面时保持用户偏好。
       const next = !current;
       window.localStorage.setItem('chat-sidebar-collapsed', String(next));
       return next;

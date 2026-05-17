@@ -1,3 +1,6 @@
+/**
+ * 本文件封装认证 Cookie、当前用户解析和统一错误响应工具。
+ */
 import 'server-only';
 
 /**
@@ -48,10 +51,12 @@ function getCookieValue(
   cookieHeader: string | null,
   name: string,
 ): string | null {
+  // 没有 Cookie 头时直接视为未登录，避免后续 split 空字符串。
   if (!cookieHeader) {
     return null;
   }
 
+  // Cookie 头是用分号拼接的键值对，这里逐项寻找目标 session 名称。
   const parts = cookieHeader.split(';');
   for (const part of parts) {
     const [rawName, ...rawValueParts] = part.trim().split('=');
@@ -69,6 +74,7 @@ function getCookieValue(
  * @returns 生产环境返回 `__Host-session`，开发环境返回普通本地 Cookie 名称。
  */
 function getSessionCookieName(): string {
+  // 生产环境必须使用 __Host- 前缀；开发环境用普通名称方便本地 http 调试。
   return process.env.NODE_ENV === 'production'
     ? SESSION_COOKIE_NAME
     : DEV_SESSION_COOKIE_NAME;
@@ -80,6 +86,7 @@ function getSessionCookieName(): string {
  * @returns NextResponse Cookie API 可用的会话 Cookie 配置。
  */
 function getSessionCookieOptions() {
+  // secure 只在生产环境开启，避免本地 http 开发时 Cookie 无法写入。
   const isProduction = process.env.NODE_ENV === 'production';
 
   return {
@@ -98,6 +105,7 @@ function getSessionCookieOptions() {
  * @param token 已签发的会话 JWT。
  */
 export function setSessionCookie(response: NextResponse, token: string): void {
+  // 登录成功后把 JWT 写入 HttpOnly Cookie，前端 JS 不能直接读取它。
   response.cookies.set(
     getSessionCookieName(),
     token,
@@ -111,6 +119,7 @@ export function setSessionCookie(response: NextResponse, token: string): void {
  * @param response 需要附加清除 Cookie 指令的 Next.js 响应对象。
  */
 export function clearSessionCookie(response: NextResponse): void {
+  // 登出时把同名 Cookie 设为空并过期，覆盖浏览器里已有的会话。
   response.cookies.set(getSessionCookieName(), '', {
     ...getSessionCookieOptions(),
     maxAge: 0,
@@ -131,6 +140,7 @@ export function createJsonError(
   status: number,
   details?: string,
 ) {
+  // details 只在有值时返回，避免客户端拿到空字符串字段。
   return NextResponse.json(
     {
       error: message,
@@ -152,6 +162,7 @@ export function createJsonError(
  * @returns 标准 401 JSON 错误响应。
  */
 export function createUnauthorizedResponse(details?: string) {
+  // 所有未登录错误统一走同一个文案和 401 状态码。
   return createJsonError(AUTH_ERROR_MESSAGE, 401, details);
 }
 
@@ -164,6 +175,7 @@ export function createUnauthorizedResponse(details?: string) {
 export async function getCurrentUserFromRequest(
   request: Request,
 ): Promise<SessionUser | null> {
+  // 当前用户完全来自请求 Cookie，不信任客户端传入的用户 ID。
   const token = getCookieValue(
     request.headers.get('cookie'),
     getSessionCookieName(),
@@ -174,6 +186,7 @@ export async function getCurrentUserFromRequest(
   }
 
   try {
+    // JWT 只存用户标识，仍然要回数据库读取最新用户信息和 API Key。
     const session = await verifySessionToken(token);
     const user = await userRepository.findById(session.id);
 
@@ -196,6 +209,7 @@ export async function getCurrentUserFromRequest(
 export async function getCurrentUserId(
   request: Request,
 ): Promise<string | null> {
+  // 复用完整用户解析逻辑，保证 token 校验和用户存在性检查保持一致。
   const user = await getCurrentUserFromRequest(request);
   return user?.id ?? null;
 }
@@ -210,6 +224,7 @@ export async function getCurrentUserId(
 export async function requireCurrentUser(
   request: Request,
 ): Promise<SessionUser> {
+  // 路由需要强制登录时使用这个函数，把 null 结果转换成可捕获的错误。
   const user = await getCurrentUserFromRequest(request);
 
   if (!user) {
@@ -227,6 +242,7 @@ export async function requireCurrentUser(
  * @throws 当请求没有有效登录态时抛出“请先登录”错误。
  */
 export async function requireCurrentUserId(request: Request): Promise<string> {
+  // 只需要用户 ID 的路由使用这个轻量入口，避免重复处理未登录分支。
   const userId = await getCurrentUserId(request);
 
   if (!userId) {

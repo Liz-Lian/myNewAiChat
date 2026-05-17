@@ -1,3 +1,6 @@
+/**
+ * 本文件封装前端会话 API 调用和错误处理逻辑。
+ */
 export type ChatMessage = {
   id?: string;
   conversationId?: string;
@@ -39,6 +42,7 @@ async function createServiceError(
   response: Response,
   fallback: string,
 ): Promise<Error> {
+  // 后端通常返回 { error, details }，这里优先取可读字段作为抛出的错误信息。
   const payload = (await response.json().catch(() => null)) as JsonError | null;
   return new Error(payload?.error || payload?.details || fallback);
 }
@@ -49,6 +53,7 @@ async function createServiceError(
  * @returns 按更新时间倒序排列的会话列表。
  */
 export async function fetchConversations(): Promise<ConversationSummary[]> {
+  // 会话列表不能走浏览器缓存，否则侧边栏会看不到刚创建或刚重命名的会话。
   const response = await fetch('/api/conversations', {
     cache: 'no-store',
   });
@@ -72,6 +77,7 @@ export async function fetchConversations(): Promise<ConversationSummary[]> {
 export async function createConversation(
   title?: string,
 ): Promise<ConversationSummary> {
+  // 只把可选标题交给后端，真正的用户归属由服务端登录态决定。
   const response = await fetch('/api/conversations', {
     method: 'POST',
     headers: {
@@ -99,6 +105,7 @@ export async function createConversation(
 export async function fetchConversationDetail(
   id: string,
 ): Promise<ConversationDetail> {
+  // 切换会话时需要重新拉取消息列表，避免使用旧会话的本地缓存。
   const response = await fetch(`/api/conversations/${id}`, {
     cache: 'no-store',
   });
@@ -124,6 +131,7 @@ export async function renameConversation(
   id: string,
   title: string,
 ): Promise<ConversationSummary> {
+  // PATCH 只提交标题字段，后端会校验标题长度并返回更新后的会话摘要。
   const response = await fetch(`/api/conversations/${id}`, {
     method: 'PATCH',
     headers: {
@@ -148,6 +156,7 @@ export async function renameConversation(
  * @param id 会话 ID。
  */
 export async function removeConversation(id: string): Promise<void> {
+  // 删除操作没有响应体可用，成功时直接让调用方更新本地会话列表。
   const response = await fetch(`/api/conversations/${id}`, {
     method: 'DELETE',
   });
@@ -169,6 +178,7 @@ export async function shareConversation(id: string): Promise<{
   isShared: boolean;
   sharedAt: string | null;
 }> {
+  // 服务端会生成或复用分享 token，并返回前端可直接复制的分享 URL。
   const response = await fetch(`/api/conversations/${id}/share`, {
     method: 'POST',
   });
@@ -186,6 +196,7 @@ export async function shareConversation(id: string): Promise<{
  * @param id 会话 ID。
  */
 export async function unshareConversation(id: string): Promise<void> {
+  // 取消分享只需要清掉服务端分享字段，前端随后把分享按钮恢复为未分享状态。
   const response = await fetch(`/api/conversations/${id}/share`, {
     method: 'DELETE',
   });
@@ -208,6 +219,7 @@ export async function continueConversationGeneration(
   messageId: string,
   signal?: AbortSignal,
 ): Promise<Response> {
+  // 继续生成返回的仍是 SSE 响应，调用方拿到 Response 后自行读取流。
   const response = await fetch('/api/chat/continue', {
     method: 'POST',
     headers: {

@@ -1,3 +1,6 @@
+/**
+ * 本文件实现会话侧边栏、搜索、重命名和操作菜单。
+ */
 import {
   Check,
   Loader2,
@@ -64,6 +67,7 @@ export function ConversationSidebar({
   onRename,
   onDelete,
 }: ConversationSidebarProps) {
+  // 侧边栏本地只维护正在编辑的会话 ID 和标题草稿。
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
 
@@ -87,6 +91,7 @@ export function ConversationSidebar({
    * @param conversation 当前会话项。
    */
   const startEditing = (conversation: ConversationItem) => {
+    // 点击重命名时把当前标题放进输入框，供内联编辑继续修改。
     setEditingId(conversation.id);
     setDraftTitle(conversation.title);
   };
@@ -97,6 +102,7 @@ export function ConversationSidebar({
    * @param id 会话 ID。
    */
   const submitEditing = (id: string) => {
+    // 点击重命名时把当前标题放进输入框，供内联编辑继续修改。
     const nextTitle = draftTitle.trim();
     if (!nextTitle) {
       return;

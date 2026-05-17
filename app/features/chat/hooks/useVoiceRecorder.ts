@@ -57,7 +57,7 @@ export function useVoiceRecorder({ onTranscript }: UseVoiceRecorderOptions) {
     mediaRecorderRef.current = null;
     chunksRef.current = [];
   }, []);
-  // 上传录音并处理转写结果的核心逻辑
+  // 上传录音后进入 processing 状态，并把后端识别出的文本回填给输入框。
   const uploadRecording = useCallback(
     async (blob: Blob) => {
       // 录音结束后进入处理态并上传到后端 STT 路由
@@ -119,7 +119,7 @@ export function useVoiceRecorder({ onTranscript }: UseVoiceRecorderOptions) {
     },
     [isSupported, onTranscript, releaseStream],
   );
-  // 开始录音的核心逻辑，包括权限申请、状态管理和错误处理
+  // 开始录音时申请麦克风权限、选择可用编码格式，并注册录音事件。
   const startRecording = useCallback(async () => {
     setError(null);
 
@@ -188,7 +188,7 @@ export function useVoiceRecorder({ onTranscript }: UseVoiceRecorderOptions) {
       releaseStream();
     }
   }, [isSupported, releaseStream, status, uploadRecording]);
-  // 停止录音的核心逻辑，主要是调用 MediaRecorder 的 stop 方法触发 onstop 事件
+  // 停止录音会触发 recorder.onstop，在那里合并音频并上传识别。
   const stopRecording = useCallback(() => {
     const recorder = mediaRecorderRef.current;
 

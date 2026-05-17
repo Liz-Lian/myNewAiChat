@@ -1,3 +1,6 @@
+/**
+ * 本文件实现 /api/auth/me 接口的 Next.js Route Handler。
+ */
 import { NextResponse } from 'next/server';
 
 import {
@@ -20,6 +23,7 @@ export const runtime = 'nodejs';
  */
 export async function GET(req: Request) {
   try {
+    // 先从 Cookie/JWT 解析用户 ID，解析失败就清掉旧 Cookie。
     const userId = await getCurrentUserId(req);
 
     if (!userId) {
@@ -28,6 +32,7 @@ export async function GET(req: Request) {
       return response;
     }
 
+    // JWT 有效还不够，仍要确认数据库用户没有被删除。
     const user = await userRepository.findById(userId);
 
     if (!user) {
@@ -36,6 +41,7 @@ export async function GET(req: Request) {
       return response;
     }
 
+    // 这里只返回前端展示需要的用户信息，不包含 API Key、密码哈希等敏感字段。
     return NextResponse.json(
       {
         user: {

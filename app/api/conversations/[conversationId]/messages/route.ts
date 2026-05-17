@@ -1,3 +1,6 @@
+/**
+ * 本文件实现 /api/conversations/[conversationId]/messages 接口的 Next.js Route Handler。
+ */
 import {
   createJsonError,
   createUnauthorizedResponse,
@@ -22,6 +25,7 @@ type RouteContext = {
  * @returns 会话消息列表；未登录、无归属或失败时返回结构化 JSON 错误。
  */
 export async function GET(req: Request, context: RouteContext) {
+  // 先按接口职责校验请求，再执行业务处理并返回响应。
   try {
     const userId = await requireCurrentUserId(req);
     const { conversationId } = await context.params;

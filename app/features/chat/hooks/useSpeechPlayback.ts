@@ -20,6 +20,7 @@ interface PlaySpeechOptions {
 }
 
 export function useSpeechPlayback() {
+  // audioRef 保存当前 Audio 实例，切换消息播放时先清理旧资源。
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const objectUrlRef = useRef<string | null>(null);
   const [activeKey, setActiveKey] = useState<string | null>(null);
@@ -69,14 +70,14 @@ export function useSpeechPlayback() {
 
   const playSpeech = useCallback(
     async ({ key, text }: PlaySpeechOptions) => {
-      // 空文本提前拦截
+      // 空文本不请求 TTS，直接把错误显示在消息列表顶部。
       const trimmedText = text.trim();
       if (!trimmedText) {
         setError('朗读内容不能为空');
         return;
       }
 
-      // 同一条消息处于暂停态时，直接恢复播放
+      // 同一条消息处于暂停态时复用现有 Audio，不重新请求后端音频。
       if (activeKey === key && status === 'paused' && audioRef.current) {
         setError(null);
         await audioRef.current.play().catch((playError) => {

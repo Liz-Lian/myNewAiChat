@@ -1,3 +1,6 @@
+/**
+ * 本文件定义应用根布局，挂载全局样式、主题和页面外壳。
+ */
 import type { Metadata } from 'next';
 import { ReactNode } from 'react';
 import { Toaster } from 'sonner';
@@ -11,6 +14,7 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
+  // 根布局把主题 Provider 放在 body 内，保证所有页面都能读取主题上下文。
   return (
     <html lang="en" suppressHydrationWarning>
       <body>

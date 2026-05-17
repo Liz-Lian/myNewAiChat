@@ -1,3 +1,6 @@
+/**
+ * 本文件实现数据库初始化 seed 数据写入逻辑。
+ */
 import 'dotenv/config';
 
 /**
@@ -22,6 +25,7 @@ const DEFAULT_ADMIN_PASSWORD = 'Admin@123456';
  * @throws 当 `DATABASE_URL` 缺失或管理员账号写入失败时抛出错误。
  */
 export async function runSeed() {
+  // seed 使用 upsert，重复执行不会创建重复的演示用户。
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
     throw new Error('缺少 DATABASE_URL，无法执行 seed');

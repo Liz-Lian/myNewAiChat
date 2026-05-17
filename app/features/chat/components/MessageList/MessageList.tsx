@@ -1,3 +1,6 @@
+/**
+ * 本文件实现聊天消息列表、滚动和消息操作交互。
+ */
 'use client';
 
 /**
@@ -57,6 +60,7 @@ export function MessageList({
   onRetryMessage,
   onEditAndResend,
 }: MessageListProps) {
+  // 语音播放 Hook 负责当前正在播放的消息和音频资源清理。
   const playback = useSpeechPlayback();
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState('');
@@ -67,6 +71,7 @@ export function MessageList({
   const lastMessageContent = messages.at(-1)?.content ?? '';
 
   const scrollToBottom = () => {
+    // 滚动到列表底部的哨兵元素，避免手算 scrollTop。
     bottomRef.current?.scrollIntoView({
       block: 'end',
     });
@@ -74,6 +79,7 @@ export function MessageList({
 
   // 当用户滚动时，更新是否应该自动滚动到底部的状态
   const updateScrollFollowState = () => {
+    // 用户离底部超过阈值时暂停自动跟随，并显示“回到底部”按钮。
     const viewport = scrollContainerRef.current;
     if (!viewport) {
       return;
@@ -104,6 +110,7 @@ export function MessageList({
   }, [conversationId, messages.length, lastMessageContent]);
 
   const startEditing = (message: Message) => {
+    // 只有已有数据库 ID 的用户消息才能编辑，生成中禁止改写上下文。
     if (!message.id || isGenerating) {
       return;
     }
@@ -113,11 +120,13 @@ export function MessageList({
   };
 
   const cancelEditing = () => {
+    // 退出编辑态时同时清空 textarea 草稿，避免串到下一条消息。
     setEditingMessageId(null);
     setEditingContent('');
   };
 
   const submitEditing = async (messageId: string) => {
+    // 编辑后的内容不能为空；提交后会让 store 删除后续回复并重新生成。
     const nextContent = editingContent.trim();
     if (!nextContent || isGenerating) {
       return;
@@ -131,6 +140,7 @@ export function MessageList({
     event: KeyboardEvent<HTMLTextAreaElement>,
     messageId: string,
   ) => {
+    // Escape 放弃编辑，Enter 提交，Shift+Enter 保留为 textarea 换行。
     if (event.key === 'Escape') {
       event.preventDefault();
       cancelEditing();

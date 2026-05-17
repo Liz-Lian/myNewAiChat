@@ -41,14 +41,10 @@ const createConversationSchema = z.object({
  */
 export async function GET(req: Request) {
   try {
-    /**
-     * 先鉴权，未登录直接走统一 401。
-     */
+    // 只要能拿到用户 ID，后面的仓储查询就会自动限定当前用户的数据。
     const userId = await requireCurrentUserId(req);
 
-    /**
-     * 仅返回当前用户的数据，禁止跨用户读取。
-     */
+    // 侧边栏只需要会话摘要，不返回消息正文，减少列表接口负担。
     const conversations = await conversationRepository.listByUserId(userId);
 
     return NextResponse.json(
@@ -81,11 +77,10 @@ export async function GET(req: Request) {
  */
 export async function POST(req: Request) {
   try {
-    /**
-     * 先鉴权，创建动作必须绑定到当前用户。
-     */
+    // 创建会话必须绑定登录用户，不能接受客户端传来的 userId。
     const userId = await requireCurrentUserId(req);
 
+    // 空请求体也允许创建默认“新对话”，所以解析失败时回退成空对象。
     const body = await req.json().catch(() => null);
     const parsed = createConversationSchema.safeParse(body ?? {});
 
@@ -97,9 +92,7 @@ export async function POST(req: Request) {
       );
     }
 
-    /**
-     * 新会话强制写入 userId，确保数据隔离。
-     */
+    // 标题没传时后端兜底，保证数据库里不会出现空标题。
     const conversation = await conversationRepository.createForUser(
       userId,
       parsed.data.title || '新对话',

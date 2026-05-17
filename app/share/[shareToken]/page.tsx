@@ -1,3 +1,6 @@
+/**
+ * 本文件实现分享会话页面，用于展示公开分享的聊天内容。
+ */
 import { MessageContent } from '@/app/features/chat/components/MessageContent';
 import { cn } from '@/lib/utils';
 import { conversationRepository } from '@/server/repositories/conversation.repository';
@@ -36,6 +39,7 @@ type SharePageProps = {
 async function getSharedConversation(
   shareToken: string,
 ): Promise<SharedConversation | null> {
+  // 先读取必要输入，再返回规范化后的查询结果。
   const conversation =
     await conversationRepository.findPublicSharedByToken(shareToken);
 
@@ -66,6 +70,7 @@ async function getSharedConversation(
  * @returns reasoning 文本或 `null`。
  */
 function getReasoning(toolCalls: unknown): string | null {
+  // 先读取必要输入，再返回规范化后的查询结果。
   if (!toolCalls || typeof toolCalls !== 'object') {
     return null;
   }
@@ -85,6 +90,7 @@ function getReasoning(toolCalls: unknown): string | null {
  * @returns 中文日期时间。
  */
 function formatDate(value: string | null): string {
+  // 先处理边界情况，再返回规范化后的结果。
   if (!value) {
     return '未记录';
   }
@@ -96,6 +102,7 @@ function formatDate(value: string | null): string {
 }
 
 export default async function SharePage({ params }: SharePageProps) {
+  // 先整理组件所需状态，再渲染对应的界面结构。
   const { shareToken } = await params;
   const conversation = await getSharedConversation(shareToken);
 

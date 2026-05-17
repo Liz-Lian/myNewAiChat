@@ -29,6 +29,7 @@ async function readAuthError(
   response: Response,
   fallback: string,
 ): Promise<string> {
+  // 登录相关接口失败时读取后端 details/error，解析失败再用兜底文案。
   const payload = (await response.json().catch(() => null)) as AuthError | null;
   return payload?.details || payload?.error || fallback;
 }
@@ -39,6 +40,7 @@ async function readAuthError(
  * @returns 当前用户、认证状态和登录方法。
  */
 export function useAuth() {
+  // 认证状态集中放在 Hook 内，页面只关心 user/loading/error 和 login。
   const [user, setUser] = useState<AuthUser | null>(null);
   const [status, setStatus] = useState<AuthStatus>('checking');
   const [isLoggingIn, setIsLoggingIn] = useState(false);

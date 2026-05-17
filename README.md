@@ -1,3 +1,5 @@
+<!-- 本文件介绍项目用途、开发方式和基础使用说明。 -->
+
 # My AI Chat
 
 一个基于 Next.js App Router 的 AI 聊天应用，支持登录态、会话持久化、流式回复、会话分享、语音识别和语音朗读。模型、STT、TTS 能力由 SiliconFlow 提供，数据使用 PostgreSQL + Prisma 保存。

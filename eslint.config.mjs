@@ -1,3 +1,6 @@
+/**
+ * 本文件配置 ESLint 规则，用于检查 TypeScript 与 React 代码质量。
+ */
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";

@@ -1,3 +1,6 @@
+/**
+ * 本文件封装 card UI 基础组件。
+ */
 import * as React from 'react';
 
 import { cn } from '@/lib/utils';
@@ -7,6 +10,7 @@ function Card({
   size = 'default',
   ...props
 }: React.ComponentProps<'div'> & { size?: 'default' | 'sm' }) {
+  // Card 根容器统一提供圆角、背景、间距和 size 数据属性。
   return (
     <div
       data-slot="card"
@@ -21,6 +25,7 @@ function Card({
 }
 
 function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
+  // Header 使用 grid 布局，方便标题、描述和右侧操作区自动对齐。
   return (
     <div
       data-slot="card-header"
@@ -34,6 +39,7 @@ function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
 }
 
 function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
+  // Title 只负责标题字号和字重，具体标签语义由调用方决定。
   return (
     <div
       data-slot="card-title"
@@ -44,6 +50,7 @@ function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
 }
 
 function CardDescription({ className, ...props }: React.ComponentProps<'div'>) {
+  // Description 使用 muted 颜色承载辅助说明文字。
   return (
     <div
       data-slot="card-description"
@@ -54,6 +61,7 @@ function CardDescription({ className, ...props }: React.ComponentProps<'div'>) {
 }
 
 function CardAction({ className, ...props }: React.ComponentProps<'div'>) {
+  // Action 固定到 Header 右上角，常用于按钮或菜单入口。
   return (
     <div
       data-slot="card-action"
@@ -67,6 +75,7 @@ function CardAction({ className, ...props }: React.ComponentProps<'div'>) {
 }
 
 function CardContent({ className, ...props }: React.ComponentProps<'div'>) {
+  // Content 统一控制卡片主体左右内边距。
   return (
     <div
       data-slot="card-content"
@@ -77,6 +86,7 @@ function CardContent({ className, ...props }: React.ComponentProps<'div'>) {
 }
 
 function CardFooter({ className, ...props }: React.ComponentProps<'div'>) {
+  // Footer 统一处理底部操作区布局和有上边框时的间距。
   return (
     <div
       data-slot="card-footer"

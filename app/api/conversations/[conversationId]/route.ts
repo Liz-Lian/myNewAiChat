@@ -46,6 +46,7 @@ type RouteContext = {
  * @returns 会话元信息响应；未登录、无归属或失败时返回结构化 JSON 错误。
  */
 export async function GET(req: Request, context: RouteContext) {
+  // 先按接口职责校验请求，再执行业务处理并返回响应。
   try {
     /**
      * 先鉴权，再执行资源级权限校验。
@@ -118,6 +119,7 @@ export async function GET(req: Request, context: RouteContext) {
  * @returns 更新后的会话元信息；未登录、无归属或失败时返回结构化 JSON 错误。
  */
 export async function PATCH(req: Request, context: RouteContext) {
+  // 先按接口职责校验请求，再执行业务处理并返回响应。
   try {
     /**
      * 先鉴权，再做参数与资源权限检查。
@@ -186,6 +188,7 @@ export async function PATCH(req: Request, context: RouteContext) {
  * @returns 删除成功消息；未登录、无归属或失败时返回结构化 JSON 错误。
  */
 export async function DELETE(req: Request, context: RouteContext) {
+  // 先按接口职责校验请求，再执行业务处理并返回响应。
   try {
     /**
      * 先鉴权，再按 userId 做删除隔离。

@@ -1,3 +1,5 @@
+<!-- 本文件为 GitHub Copilot 同步高信号仓库协作说明。 -->
+
 # Copilot Workspace Instructions
 
 This file mirrors the highest-signal repo guidance for Copilot. Treat [AGENTS.md](../AGENTS.md) as the source of truth when in doubt.

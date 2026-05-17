@@ -1,3 +1,6 @@
+/**
+ * 本文件实现 /api/auth/login 接口的 Next.js Route Handler。
+ */
 import { NextResponse } from 'next/server';
 
 import {
@@ -22,9 +25,9 @@ export const runtime = 'nodejs';
  */
 export async function POST(req: Request) {
   try {
-    const bodyResult = loginRequestSchema.safeParse(
-      await req.json().catch(() => null),
-    );
+    // 登录表单只接受邮箱和密码，JSON 解析失败时统一交给 zod 生成参数错误。
+    const requestBody = await req.json().catch(() => null);
+    const bodyResult = loginRequestSchema.safeParse(requestBody);
 
     if (!bodyResult.success) {
       return createJsonError(
@@ -35,6 +38,7 @@ export async function POST(req: Request) {
     }
 
     const { email, password } = bodyResult.data;
+    // 先按邮箱查用户，再统一返回“邮箱或密码错误”，避免泄露账号是否存在。
     const user = await userRepository.findByEmail(email);
 
     if (!user) {
@@ -47,6 +51,7 @@ export async function POST(req: Request) {
       return createJsonError('邮箱或密码错误', 401);
     }
 
+    // 密码校验通过后签发短载荷 JWT，完整用户信息仍然从数据库读取。
     const token = await createSessionToken({
       id: user.id,
       email: user.email,
@@ -68,6 +73,7 @@ export async function POST(req: Request) {
       },
     );
 
+    // token 写入 HttpOnly Cookie，响应体只返回前端展示需要的基础用户信息。
     setSessionCookie(response, token);
     return response;
   } catch (error) {

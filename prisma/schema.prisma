@@ -1,3 +1,4 @@
+// 本文件定义 Prisma 数据模型、数据库连接和客户端生成配置。
 generator client {
   provider = "prisma-client"
   output   = "../app/generated/prisma"

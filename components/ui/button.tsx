@@ -1,3 +1,6 @@
+/**
+ * 本文件封装 button UI 基础组件。
+ */
 import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { Slot } from 'radix-ui';
@@ -49,6 +52,7 @@ function Button({
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean;
   }) {
+  // asChild 为真时把按钮样式透传给子组件，否则渲染原生 button。
   const Comp = asChild ? Slot.Root : 'button';
 
   return (

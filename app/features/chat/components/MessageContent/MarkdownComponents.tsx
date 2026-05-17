@@ -25,6 +25,7 @@ type MarkdownCodeProps = ComponentPropsWithoutRef<'code'> &
  * 为用户消息和AI消息应用不同的颜色方案
  */
 export function createMarkdownComponents(role: MessageRole): Components {
+  // 用户气泡和助手气泡底色不同，所以 Markdown 内部文字颜色也要跟随角色切换。
   const isUser = role === 'user';
   const textClass = isUser ? 'text-primary-foreground' : 'text-foreground';
   const mutedTextClass = isUser

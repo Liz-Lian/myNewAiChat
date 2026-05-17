@@ -1,3 +1,6 @@
+/**
+ * 本文件封装认证 JWT 的签发、校验和密钥读取逻辑。
+ */
 import 'server-only';
 
 /**
@@ -33,6 +36,7 @@ export type AuthPayload = {
  * @throws 当 `AUTH_JWT_SECRET` 未配置时抛出错误。
  */
 function getJwtSecret(): Uint8Array {
+  // jose 需要 Uint8Array 密钥，所以把环境变量里的字符串编码成字节。
   const secret = process.env.AUTH_JWT_SECRET;
 
   if (!secret) {
@@ -50,6 +54,7 @@ function getJwtSecret(): Uint8Array {
  * @throws 当 `AUTH_JWT_SECRET` 未配置或签名失败时抛出错误。
  */
 export async function createSessionToken(user: AuthPayload): Promise<string> {
+  // JWT 只放必要身份字段，用户 ID 放在标准 sub 字段里。
   return new SignJWT({
     email: user.email,
     name: user.name,
@@ -71,6 +76,7 @@ export async function createSessionToken(user: AuthPayload): Promise<string> {
  * @throws 当令牌签名、issuer、audience、过期时间或 payload 不合法时抛出错误。
  */
 export async function verifySessionToken(token: string): Promise<AuthPayload> {
+  // 同时校验签名、issuer、audience 和过期时间，防止其它 token 被复用。
   const { payload } = await jwtVerify(token, getJwtSecret(), {
     algorithms: ['HS256'],
     issuer: AUTH_ISSUER,
