@@ -2,9 +2,12 @@ import {
   Check,
   Loader2,
   LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
   MoreHorizontal,
   Pencil,
   Plus,
+  Search,
   Settings,
   Share2,
   Trash2,
@@ -34,6 +37,12 @@ interface ConversationSidebarProps {
   conversations: ConversationItem[];
   activeId?: string;
   loading?: boolean;
+  collapsed?: boolean;
+  searchQuery?: string;
+  filteredCount?: number;
+  totalCount?: number;
+  onToggleCollapsed: () => void;
+  onSearchQueryChange: (query: string) => void;
   onSelect: (id: string) => void;
   onNewChat: () => void;
   onRename: (id: string, title: string) => void;
@@ -44,6 +53,12 @@ export function ConversationSidebar({
   conversations,
   activeId,
   loading = false,
+  collapsed = false,
+  searchQuery = '',
+  filteredCount,
+  totalCount,
+  onToggleCollapsed,
+  onSearchQueryChange,
   onSelect,
   onNewChat,
   onRename,
@@ -92,29 +107,102 @@ export function ConversationSidebar({
   };
 
   return (
-    <aside className="border-border/50 bg-sidebar/80 flex h-full w-72 shrink-0 flex-col border-r backdrop-blur-2xl">
-      <div className="border-border/50 border-b p-4">
-        <div className="mb-4 flex items-center gap-3 px-1">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-linear-to-br from-sky-500 via-blue-500 to-indigo-500 text-sm font-semibold text-white shadow-lg shadow-blue-500/20">
-            G
-          </div>
-          <div>
-            <p className="text-sidebar-foreground text-sm font-semibold">
-              My AI Chat
-            </p>
-            <p className="text-muted-foreground text-xs">灵感来自 Gemini</p>
-          </div>
-        </div>
-        <Button
-          onClick={onNewChat}
-          className="bg-primary text-primary-foreground shadow-primary/15 hover:bg-primary/90 w-full justify-start gap-2 rounded-2xl shadow-lg"
+    <aside
+      className={cn(
+        'border-border/50 bg-sidebar/80 flex h-full shrink-0 flex-col border-r backdrop-blur-2xl transition-[width] duration-300 ease-out',
+        collapsed ? 'w-18' : 'w-72',
+      )}
+    >
+      <div className="border-border/50 border-b p-3">
+        <div
+          className={cn(
+            'mb-4 flex items-center gap-3 px-1',
+            collapsed && 'justify-center px-0',
+          )}
         >
-          <Plus className="h-4 w-4" />
-          新对话
-        </Button>
+          {!collapsed ? (
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-linear-to-br from-sky-500 via-blue-500 to-indigo-500 text-sm font-semibold text-white shadow-lg shadow-blue-500/20">
+              G
+            </div>
+          ) : null}
+          {!collapsed ? (
+            <div>
+              <p className="text-sidebar-foreground text-sm font-semibold">
+                My AI Chat
+              </p>
+              <p className="text-muted-foreground text-xs">灵感来自 Gemini</p>
+            </div>
+          ) : null}
+          <Button
+            type="button"
+            size="icon-sm"
+            variant="ghost"
+            onClick={onToggleCollapsed}
+            className={cn('ml-auto rounded-2xl', collapsed && 'ml-0')}
+            aria-label={collapsed ? '展开侧边栏' : '折叠侧边栏'}
+          >
+            {collapsed ? (
+              <PanelLeftOpen className="h-4 w-4" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+        {collapsed ? (
+          <Button
+            type="button"
+            onClick={onNewChat}
+            size="icon-sm"
+            className="mx-auto flex rounded-2xl"
+            aria-label="新对话"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        ) : (
+          <Button
+            onClick={onNewChat}
+            className="bg-primary text-primary-foreground shadow-primary/15 hover:bg-primary/90 w-full justify-start gap-2 rounded-2xl shadow-lg"
+          >
+            <Plus className="h-4 w-4" />
+            新对话
+          </Button>
+        )}
       </div>
 
-      <ScrollArea className="flex-1">
+      {collapsed ? null : (
+        <div className="border-border/50 border-b p-3">
+          <div className="border-border/70 bg-background/70 flex items-center gap-2 rounded-2xl border px-3">
+            <Search className="text-muted-foreground h-4 w-4" />
+            <Input
+              value={searchQuery}
+              onChange={(event) => onSearchQueryChange(event.target.value)}
+              placeholder="搜索会话"
+              className="h-10 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+            />
+            {searchQuery ? (
+              <Button
+                type="button"
+                size="icon-xs"
+                variant="ghost"
+                onClick={() => onSearchQueryChange('')}
+                aria-label="清空搜索"
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            ) : null}
+          </div>
+          {typeof filteredCount === 'number' &&
+          typeof totalCount === 'number' ? (
+            <p className="text-muted-foreground mt-2 px-1 text-xs">
+              {searchQuery
+                ? `找到 ${filteredCount} 个对话`
+                : `共 ${totalCount} 个对话`}
+            </p>
+          ) : null}
+        </div>
+      )}
+
+      <ScrollArea className={cn('flex-1', collapsed && 'hidden')}>
         <div className="space-y-2 p-3">
           {loading ? (
             <div className="text-muted-foreground flex items-center gap-2 px-3 py-3 text-sm">
@@ -124,7 +212,7 @@ export function ConversationSidebar({
           ) : null}
           {!loading && conversations.length === 0 ? (
             <div className="text-muted-foreground px-3 py-8 text-center text-sm">
-              暂无历史会话
+              {searchQuery ? '未找到匹配会话' : '暂无历史会话'}
             </div>
           ) : null}
           {conversations.map((conv) => {
@@ -228,20 +316,35 @@ export function ConversationSidebar({
         </div>
       </ScrollArea>
 
-      <div className="border-border/50 space-y-2 border-t p-4">
+      <div
+        className={cn(
+          'border-border/50 space-y-2 border-t p-3',
+          collapsed && 'flex flex-col items-center',
+        )}
+      >
         <Button
           variant="ghost"
-          className="text-muted-foreground hover:bg-accent hover:text-foreground w-full justify-start gap-2 rounded-2xl"
+          size={collapsed ? 'icon-sm' : 'default'}
+          className={cn(
+            'text-muted-foreground hover:bg-accent hover:text-foreground rounded-2xl',
+            collapsed ? 'w-10' : 'w-full justify-start gap-2',
+          )}
+          aria-label="设置"
         >
           <Settings className="h-4 w-4" />
-          设置
+          <span className={cn(collapsed && 'hidden')}>设置</span>
         </Button>
         <Button
           variant="ghost"
-          className="text-muted-foreground hover:bg-accent hover:text-foreground w-full justify-start gap-2 rounded-2xl"
+          size={collapsed ? 'icon-sm' : 'default'}
+          className={cn(
+            'text-muted-foreground hover:bg-accent hover:text-foreground rounded-2xl',
+            collapsed ? 'w-10' : 'w-full justify-start gap-2',
+          )}
+          aria-label="退出"
         >
           <LogOut className="h-4 w-4" />
-          退出
+          <span className={cn(collapsed && 'hidden')}>退出</span>
         </Button>
       </div>
     </aside>

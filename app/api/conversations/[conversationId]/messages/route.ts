@@ -3,6 +3,7 @@ import {
   createUnauthorizedResponse,
   requireCurrentUserId,
 } from '@/server/auth/utils';
+import { generationTaskManager } from '@/server/chat/generation-task-manager';
 import { conversationRepository } from '@/server/repositories/conversation.repository';
 
 export const runtime = 'nodejs';
@@ -33,6 +34,28 @@ export async function GET(req: Request, context: RouteContext) {
       return createJsonError('会话不存在', 404);
     }
 
+    const tasks = generationTaskManager.listConversationTasks(
+      userId,
+      conversationId,
+    );
+    const taskByMessageId = new Map(
+      tasks.map((task) => [task.messageId, task]),
+    );
+    const messages = conversation.messages.map((message) => {
+      const task = taskByMessageId.get(message.id);
+
+      if (!task || message.role !== 'assistant') {
+        return message;
+      }
+
+      return {
+        ...message,
+        content: task.fullContent || message.content,
+        isComplete: task.status === 'completed',
+        hasError: task.status === 'error',
+      };
+    });
+
     return Response.json(
       {
         conversation: {
@@ -44,7 +67,7 @@ export async function GET(req: Request, context: RouteContext) {
           createdAt: conversation.createdAt,
           updatedAt: conversation.updatedAt,
         },
-        messages: conversation.messages,
+        messages,
       },
       {
         headers: {

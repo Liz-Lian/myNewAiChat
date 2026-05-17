@@ -7,8 +7,9 @@
  * 禁用状态下无法输入和发送（如正在加载响应时）。
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Loader2, Mic, MicOff, RotateCcw, Send, Square } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { useVoiceRecorder } from '@/app/features/chat/hooks/useVoiceRecorder';
 import { Button } from '@/components/ui/button';
@@ -56,17 +57,24 @@ export function MessageInput({
     void recorder.startRecording();
   };
 
-  const isRetryVisible = Boolean(error || recorder.error);
-  const combinedError = error || recorder.error;
+  useEffect(() => {
+    if (!recorder.error) {
+      return;
+    }
+
+    toast.error(recorder.error);
+  }, [recorder.error]);
+
+  const isRetryVisible = Boolean(error);
   const micDisabled =
     disabled || recorder.isProcessing || !recorder.isSupported;
 
   return (
     <div className="border-border/50 bg-background/75 border-t px-4 py-4 backdrop-blur-xl md:px-6">
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
-        {combinedError ? (
+        {error ? (
           <p className="border-destructive/20 bg-destructive/10 text-destructive rounded-2xl border px-4 py-3 text-sm">
-            {combinedError}
+            {error}
           </p>
         ) : null}
         <div className="text-muted-foreground flex items-center justify-between gap-3 text-xs">

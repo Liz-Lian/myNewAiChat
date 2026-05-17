@@ -53,6 +53,7 @@
 
 - 使用分号；TypeScript/TSX/JS 使用单引号。
 - import 顺序保持为：外部包、`@/` 别名、相对导入。
+- 新建的每个支持注释语法的文件，都必须在文件开头添加中文注释，简要说明该文件用途；函数注释使用 JSDoc 格式，并在函数内部用简短的中文 `//` 注释说明关键步骤，避免生成大段难以理解的代码。
 - 不要使用 `any`、`@ts-ignore`、`@ts-expect-error`，不要削弱类型来取悦编译器。
 - React 组件用 PascalCase；hooks 和 Zustand stores 用 camelCase 且以 `use` 开头。
 - Route Handlers 遵循 Next.js 约定，如 `export async function POST()`；需要 Node 能力时显式 `export const runtime = 'nodejs';`。
@@ -74,7 +75,7 @@
 - 文件名使用 `YYYY-MM-DD-问题简述.md`，问题简述用中文短语，避免过长。
 - 优先参考 `bug日志/_template.md` 的结构，至少包含：现象、复现步骤、根因分析、修复方案、验证、回归风险、经验总结。
 - 文档要写清楚相关文件路径、实际改动点和执行过的验证命令。
-- 如果同一次任务修复多个相关 bug，可以合并成一篇日志；无关 bug 分开记录。
+- 如果用户一次性提出多个 bug，必须为每个 bug 各自新增一篇日志，不要把多个 bug 合并到同一个文档里。
 
 ## 如果不确定
 

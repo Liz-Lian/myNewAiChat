@@ -9,6 +9,7 @@ import {
 import { conversationRepository } from '@/server/repositories/conversation.repository';
 import { messageRepository } from '@/server/repositories/message.repository';
 import { userRepository } from '@/server/repositories/user.repository';
+import { generationTaskManager } from '@/server/chat/generation-task-manager';
 import {
   DEFAULT_SILICONFLOW_BASE_URL,
   joinSiliconFlowUrl,
@@ -28,6 +29,18 @@ const chatMessageSchema = z.object({
 const chatRequestSchema = z.object({
   messages: z.array(chatMessageSchema).min(1, '至少需要一条消息'),
   conversationId: z.string().trim().min(1, '会话 ID 不合法').optional(),
+  regeneration: z
+    .discriminatedUnion('type', [
+      z.object({
+        type: z.literal('retry'),
+        messageId: z.string().trim().min(1, '消息 ID 不合法'),
+      }),
+      z.object({
+        type: z.literal('edit'),
+        messageId: z.string().trim().min(1, '消息 ID 不合法'),
+      }),
+    ])
+    .optional(),
   title: z
     .string()
     .trim()
@@ -103,7 +116,12 @@ export async function POST(req: Request) {
       );
     }
 
-    const { conversationId: rawConversationId, messages, title } = parsed.data;
+    const {
+      conversationId: rawConversationId,
+      messages,
+      regeneration,
+      title,
+    } = parsed.data;
     const latestUserMessage = [...messages]
       .reverse()
       .find((message) => message.role === 'user');
@@ -114,13 +132,48 @@ export async function POST(req: Request) {
 
     let conversationId = rawConversationId;
     if (conversationId) {
-      const existingConversation = await conversationRepository.findOwnedIdOnly(
-        userId,
-        conversationId,
-      );
+      const existingConversation =
+        await conversationRepository.findOwnedWithMessages(
+          userId,
+          conversationId,
+        );
 
       if (!existingConversation) {
         return createJsonError('会话不存在', 404);
+      }
+
+      if (regeneration?.type === 'retry') {
+        const targetMessage = existingConversation.messages.find(
+          (message) => message.id === regeneration.messageId,
+        );
+
+        if (!targetMessage || targetMessage.role !== 'assistant') {
+          return createJsonError('消息不存在', 404);
+        }
+
+        await messageRepository.deleteFromMessage(
+          conversationId,
+          regeneration.messageId,
+        );
+      }
+
+      if (regeneration?.type === 'edit') {
+        const targetMessage = existingConversation.messages.find(
+          (message) => message.id === regeneration.messageId,
+        );
+
+        if (!targetMessage || targetMessage.role !== 'user') {
+          return createJsonError('消息不存在', 404);
+        }
+
+        await messageRepository.updateUserContent(
+          regeneration.messageId,
+          latestUserMessage.content,
+        );
+        await messageRepository.deleteAfterMessage(
+          conversationId,
+          regeneration.messageId,
+        );
       }
     } else {
       const conversation = await conversationRepository.createForUser(
@@ -130,10 +183,20 @@ export async function POST(req: Request) {
       conversationId = conversation.id;
     }
 
-    await messageRepository.create({
+    const userMessage = regeneration
+      ? null
+      : await messageRepository.create({
+          conversationId,
+          role: 'user',
+          content: latestUserMessage.content,
+        });
+    const assistantMessage =
+      await messageRepository.createAssistantPlaceholder(conversationId);
+    generationTaskManager.cleanupOldTasks();
+    generationTaskManager.createTask({
+      messageId: assistantMessage.id,
+      userId,
       conversationId,
-      role: 'user',
-      content: latestUserMessage.content,
     });
     await conversationRepository.touch(conversationId);
 
@@ -155,12 +218,12 @@ export async function POST(req: Request) {
           messages,
           stream: true,
         }),
-        signal: req.signal,
       },
     );
 
     if (!upstreamResponse.ok) {
       const errorText = await upstreamResponse.text();
+      generationTaskManager.errorTask(assistantMessage.id, '上游模型调用失败');
       return createJsonError(
         '上游模型调用失败',
         502,
@@ -169,12 +232,14 @@ export async function POST(req: Request) {
     }
 
     if (!upstreamResponse.body) {
+      generationTaskManager.errorTask(assistantMessage.id, '上游模型响应异常');
       return createJsonError('上游模型响应异常', 502, '未收到可读流');
     }
 
     const upstreamReader = upstreamResponse.body.getReader();
     const encoder = new TextEncoder();
     let assistantContent = '';
+    let clientConnected = true;
 
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
@@ -186,37 +251,73 @@ export async function POST(req: Request) {
           await consumeSseStream({
             reader: upstreamReader,
             onChunk: (chunk) => {
-              controller.enqueue(chunk);
+              if (!clientConnected) {
+                return;
+              }
+
+              try {
+                controller.enqueue(chunk);
+              } catch {
+                clientConnected = false;
+                generationTaskManager.pauseTask(assistantMessage.id);
+              }
             },
             onDelta: (delta) => {
               assistantContent += delta;
+              generationTaskManager.appendFullContent(
+                assistantMessage.id,
+                delta,
+              );
+              void messageRepository
+                .updateContent(assistantMessage.id, assistantContent)
+                .catch((error) => {
+                  console.warn('Failed to persist streaming content:', error);
+                });
+              if (clientConnected) {
+                generationTaskManager.appendSentContent(
+                  assistantMessage.id,
+                  delta,
+                );
+              }
             },
           });
 
-          if (assistantContent.trim()) {
-            await messageRepository.create({
-              conversationId,
-              role: 'assistant',
-              content: assistantContent,
-            });
-            await conversationRepository.touch(conversationId);
-          }
+          await messageRepository.updateContent(
+            assistantMessage.id,
+            assistantContent,
+          );
+          await conversationRepository.touch(conversationId);
+          generationTaskManager.completeTask(assistantMessage.id);
 
-          controller.close();
+          if (clientConnected) {
+            controller.close();
+          }
         } catch (error) {
           console.error('Chat Stream Error:', error);
-          controller.enqueue(
-            encoder.encode(
-              `data: ${JSON.stringify({ error: '上游流式响应中断，请稍后重试' })}\n\n`,
-            ),
+          generationTaskManager.errorTask(
+            assistantMessage.id,
+            '上游流式响应中断，请稍后重试',
           );
-          controller.close();
+          await messageRepository.updateContent(
+            assistantMessage.id,
+            assistantContent,
+          );
+
+          if (clientConnected) {
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({ error: '上游流式响应中断，请稍后重试' })}\n\n`,
+              ),
+            );
+            controller.close();
+          }
         } finally {
           upstreamReader.releaseLock();
         }
       },
-      async cancel() {
-        await upstreamReader.cancel();
+      cancel() {
+        clientConnected = false;
+        generationTaskManager.pauseTask(assistantMessage.id);
       },
     });
 
@@ -226,6 +327,8 @@ export async function POST(req: Request) {
         'Cache-Control': 'no-cache, no-transform',
         Connection: 'keep-alive',
         'X-Conversation-Id': conversationId,
+        'X-Message-Id': assistantMessage.id,
+        ...(userMessage ? { 'X-User-Message-Id': userMessage.id } : {}),
       },
     });
   } catch (error) {

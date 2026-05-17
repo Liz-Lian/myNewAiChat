@@ -4,6 +4,8 @@ export type ChatMessage = {
   role: 'user' | 'assistant';
   content: string;
   toolCalls?: unknown;
+  isComplete?: boolean;
+  hasError?: boolean;
   createdAt?: string;
 };
 
@@ -191,4 +193,36 @@ export async function unshareConversation(id: string): Promise<void> {
   if (!response.ok) {
     throw await createServiceError(response, '取消分享失败');
   }
+}
+
+/**
+ * 请求继续补发指定 assistant 消息尚未送达的内容。
+ *
+ * @param conversationId 会话 ID。
+ * @param messageId assistant 消息 ID。
+ * @param signal 可选中断信号。
+ * @returns fetch 响应，调用方负责消费 SSE 流。
+ */
+export async function continueConversationGeneration(
+  conversationId: string,
+  messageId: string,
+  signal?: AbortSignal,
+): Promise<Response> {
+  const response = await fetch('/api/chat/continue', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      conversationId,
+      messageId,
+    }),
+    signal,
+  });
+
+  if (!response.ok) {
+    throw await createServiceError(response, '继续生成失败');
+  }
+
+  return response;
 }

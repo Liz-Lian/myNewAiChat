@@ -41,11 +41,13 @@ Read [AGENTS.md](../AGENTS.md) first, then open the task-specific docs only when
 
 - Use semicolons and single quotes in TypeScript, TSX, and JS files.
 - Keep imports ordered as external packages, then `@/` aliases, then relative imports.
+- Every new file that supports comments must start with a Chinese comment explaining its purpose; function comments should use JSDoc format, and function bodies should include short Chinese `//` comments for key steps so large generated blocks remain understandable.
 - Do not use `any`, `@ts-ignore`, or `@ts-expect-error`.
 - Use `zod` for API payload validation and structured JSON errors.
 - Keep Prisma queries in `server/repositories/`; route handlers should orchestrate.
 - Use `cn()` from [lib/utils.ts](../lib/utils.ts) for conditional Tailwind class names.
 - Preserve streaming, loading, abort, and retry behavior unless the task explicitly changes it.
+- After fixing bugs, write bug logs under `bug日志/`; when one request contains multiple bugs, create one separate log per bug instead of combining them.
 
 ## If Unsure
 

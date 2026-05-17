@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { Check, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { LoginDialog } from '@/app/features/auth/components/LoginDialog';
+import { useAuth } from '@/app/features/auth/hooks/useAuth';
 import {
   shareConversation,
   unshareConversation,
@@ -25,10 +27,14 @@ import { Input } from '@/components/ui/input';
 export default function Home() {
   const [manualShareUrl, setManualShareUrl] = useState<string | null>(null);
   const [manualShareCopied, setManualShareCopied] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const auth = useAuth();
   const {
     messages,
     currentConversationId,
     conversations,
+    filteredConversations,
+    conversationSearchQuery,
     conversationsLoading,
     loadConversations,
     createNewConversation,
@@ -37,9 +43,14 @@ export default function Home() {
     updateConversationTitle,
     sendMessage,
     retryLastMessage,
+    retryMessage,
+    editAndResend,
+    continueGeneration,
+    setConversationSearchQuery,
     stopGeneration,
     isGenerating,
     isLoading,
+    streamingMessageId,
     error,
   } = useChatStore();
 
@@ -129,8 +140,25 @@ export default function Home() {
 
   useEffect(() => stopGeneration, [stopGeneration]);
   useEffect(() => {
-    void loadConversations();
-  }, [loadConversations]);
+    if (auth.isAuthenticated) {
+      void loadConversations();
+    }
+  }, [auth.isAuthenticated, loadConversations]);
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      setSidebarCollapsed(
+        window.localStorage.getItem('chat-sidebar-collapsed') === 'true',
+      );
+    });
+  }, []);
+
+  const handleToggleSidebar = () => {
+    setSidebarCollapsed((current) => {
+      const next = !current;
+      window.localStorage.setItem('chat-sidebar-collapsed', String(next));
+      return next;
+    });
+  };
 
   const activeConversation = conversations.find(
     (conversation) => conversation.id === currentConversationId,
@@ -138,9 +166,15 @@ export default function Home() {
 
   return (
     <ChatLayout
-      conversations={conversations}
+      conversations={filteredConversations}
       activeConversationId={currentConversationId || undefined}
       conversationsLoading={conversationsLoading}
+      sidebarCollapsed={sidebarCollapsed}
+      searchQuery={conversationSearchQuery}
+      filteredCount={filteredConversations.length}
+      totalCount={conversations.length}
+      onToggleSidebar={handleToggleSidebar}
+      onSearchQueryChange={setConversationSearchQuery}
       onSelectConversation={(id) => {
         void switchConversation(id);
       }}
@@ -166,7 +200,15 @@ export default function Home() {
       currentConversationIsShared={Boolean(activeConversation?.isShared)}
     >
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-transparent">
-        <MessageList messages={messages} isGenerating={isGenerating} />
+        <MessageList
+          messages={messages}
+          conversationId={currentConversationId}
+          isGenerating={isGenerating}
+          streamingMessageId={streamingMessageId}
+          onContinueGeneration={continueGeneration}
+          onRetryMessage={retryMessage}
+          onEditAndResend={editAndResend}
+        />
         <MessageInput
           onSend={handleSendMessage}
           onStop={stopGeneration}
@@ -176,6 +218,12 @@ export default function Home() {
           error={error}
         />
       </div>
+      <LoginDialog
+        open={!auth.isChecking && !auth.isAuthenticated}
+        loading={auth.isLoggingIn}
+        error={auth.error}
+        onLogin={auth.login}
+      />
       <Dialog
         open={Boolean(manualShareUrl)}
         onOpenChange={(open) => {
